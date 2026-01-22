@@ -20,7 +20,7 @@ class SubCategory(Model):
 
     """Required files for INSERT statement
     """
-    _REQUIRED = ["category_id", "subcategory_id", "code" "name", "weight", "status"]
+    _REQUIRED = ["category_id", "subcategory_id", "code", "name", "weight", "status"]
 
     """Fields should not been overrided for set_attrs method
     """

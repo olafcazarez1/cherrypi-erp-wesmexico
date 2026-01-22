@@ -20,7 +20,7 @@ class Tax(Model):
 
     """Required files for INSERT statement
     """
-    _REQUIRED = ["tax_id", "code" "name", "percent", "status"]
+    _REQUIRED = ["tax_id", "code", "name", "percent", "status"]
 
     """Fields should not been overrided for set_attrs method
     """

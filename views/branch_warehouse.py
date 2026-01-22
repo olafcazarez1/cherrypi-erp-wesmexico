@@ -20,7 +20,7 @@ class vBranchWarehouse(Model):
 
     """Required files for INSERT statement
     """
-    _REQUIRED = ["branch_id", "warehouse_id", "code" "name", "type", "weight", "status"]
+    _REQUIRED = ["branch_id", "warehouse_id", "code", "name", "type", "weight", "status"]
 
     """Fields should not been overrided for set_attrs method
     """

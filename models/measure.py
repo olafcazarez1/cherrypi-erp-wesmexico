@@ -20,7 +20,7 @@ class Measure(Model):
 
     """Required files for INSERT statement
     """
-    _REQUIRED = ["measure_id", "code" "name", "external_reference", "weight", "status"]
+    _REQUIRED = ["measure_id", "code", "name", "external_reference", "weight", "status"]
 
     """Fields should not been overrided for set_attrs method
     """
