@@ -1,0 +1,9 @@
+cherrypy
+simplejson
+sqlescapy
+pymysql
+pymysql-pooling
+routes
+Pillow
+BeautifulSoup4
+pytz

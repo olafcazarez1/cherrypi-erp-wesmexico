@@ -1,0 +1,2 @@
+ALTER TABLE `employees_medicals_insurances` ADD `withdrawal` ENUM('na', 'resignation', 'dismissal') NOT NULL DEFAULT 'na' AFTER `document`;
+ALTER TABLE `employees_medicals_insurances` ADD `reason_for_withdrawal` VARCHAR(1024) not null default '' AFTER `leave_date`;
