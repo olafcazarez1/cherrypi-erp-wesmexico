@@ -39,6 +39,7 @@ class InvoiceDocument(Model):
         "transaction_type",
         "transaction_date",
         "transaction_status",
+        "is_global",
         "status",
     ]
 
@@ -713,6 +714,37 @@ class InvoiceDocument(Model):
             >>> self.transaction_status = transaction_status
         """
         self.__transaction_status = transaction_status
+
+    @property
+    def is_global(self):
+        """Getter is_global
+
+        Args:
+
+        Returns:
+            bool: is_global value
+
+        Usage:
+            >>> is_global = self.is_global
+        """
+        try:
+            return self.__is_global
+        except AttributeError:
+            return False
+
+    @is_global.setter
+    def is_global(self, is_global):
+        """Setter is_global
+
+        Args:
+            is_global(bool): is_global.
+
+        Returns:
+
+        Usage:
+            >>> self.is_global = is_global
+        """
+        self.__is_global = is_global
 
     @property
     def status(self):

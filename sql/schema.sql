@@ -209,7 +209,8 @@ CREATE TABLE `employees` (
 	`birthday` DATE NOT NULL DEFAULT '1900-01-01',
 	`gender` ENUM('male', 'female') NOT NULL DEFAULT 'male',
 	`blood_type` ENUM("NA", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-") NOT NULL DEFAULT 'NA',
-	`marital_status` ENUM("single", "married", "divorced", "widowed", "separated", "concubinage") NOT NULL DEFAULT 'NA',
+	`marital_status` ENUM("single", "married", "divorced", "widowed", "separated", "concubinage") NOT NULL DEFAULT 'single',
+	`education_level` enum('none','primary','secondary','high_school','associate','bachelor','master','doctorate') NOT NULL DEFAULT 'none',
 	`taxpayer_id` char(32) default '',
 	`federal_id` char(32) default '',
 	`ssn` char(32) default '',
@@ -597,13 +598,14 @@ CREATE TABLE `brands` (
 	`brand_id` CHAR(36) NOT NULL DEFAULT '',
 	`code` CHAR(32) DEFAULT '',
 	`name` CHAR(128) NOT NULL DEFAULT '',
+	`type` enum('product','car') NOT NULL DEFAULT 'product',
 	`weight` int(5) DEFAULT 0,
 	`status` ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
 	`created_at` TIMESTAMP NOT NULL DEFAULT '1990-01-01 00:00:00',
 	`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	PRIMARY KEY (`brand_id`),
-	UNIQUE KEY (`code`),
-	UNIQUE KEY (`name`)
+	UNIQUE KEY `name` (`type`,`name`),
+	UNIQUE KEY `code` (`type`,`code`)
 )  ENGINE=INNODB DEFAULT CHARSET=UTF8;
 
 CREATE TABLE `models` (
@@ -717,7 +719,7 @@ CREATE TABLE `products_units` (
 	`uid` CHAR(64) NOT NULL DEFAULT '',
 	`description` VARCHAR(1024) NOT NULL DEFAULT '',
 	`importation_number` char(20) not null default '',
-	`importation_date` timestamp not null default '1970-01-01 00:00:00',
+	`importation_date` timestamp not null default '1980-01-01 00:00:00',
 	`custom_id`  char(36) not null default '00',
 	`status` enum('active','damage','assigned','sold','delivered','disposal','inactive') NOT NULL DEFAULT 'active',
 	`created_at` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
@@ -769,7 +771,7 @@ create table `stocks_io` (
 	`total` double not null default 0.00,
 	`purchase_origin` enum( 'national', 'international' ) default 'national',
 	`importation_number` char(20) not null default '',
-	`importation_date` timestamp not null default '1970-01-01 00:00:00',
+	`importation_date` timestamp not null default '1980-01-01 00:00:00',
 	`custom_id`  char(36) not null default '00',
 	`type` enum( 'purchases', 'input', 'output', 'declines', 'losses' ) default 'purchases',
 	`transaction_date` timestamp not null default '2000-01-01 00:00:00',
@@ -1044,6 +1046,7 @@ CREATE TABLE `invoiced_documents` (
 	`transaction_type` ENUM('full_payment', 'payment_in_installments') DEFAULT 'full_payment',
 	`transaction_date` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
 	`transaction_status` ENUM('pending', 'paid') DEFAULT 'pending',
+	`is_global` tinyint(1) NOT NULL DEFAULT 0,
 	`status` ENUM('pending', 'signed', 'cancellation_requested', 'cancelled') NOT NULL DEFAULT 'pending',
 	`created_at` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
 	`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP ,
