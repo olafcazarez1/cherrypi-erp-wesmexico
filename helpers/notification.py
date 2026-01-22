@@ -135,8 +135,9 @@ class Notification(object):
         document = data["document"]
 
         to = [
-            # 'olaf.cazarez@wesmexico.com'
-            document["client"]["email"]
+            "olaf.cazarez@wesmexico.com",
+            "juancarlos.valenzuela@wesmexico.com",
+            # document["client"]["email"]
         ]
         cc = []
         bcc = []
