@@ -865,7 +865,7 @@ class Query:
         """
         return self.one_or_none(conn=conn)
 
-    def one_or_none(self, exception: bool = False, conn: DBConnector = None) -> typing.Union[object, None]:
+    def one_or_none(self, exception: bool = False, conn: DBConnector = None) -> typing.Optional[typing.Any]:
         """Return one result of this Query or None if the result does
         not contain any row.
 

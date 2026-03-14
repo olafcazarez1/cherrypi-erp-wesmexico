@@ -36,7 +36,7 @@ from models.sale_delivery_order_product_unit import SaleDeliveryOrderProductUnit
 
 
 class MapDeliveryOrders(object):
-    def init(self, mapper=None):
+    def init(self, mapper):
 
         mapper.connect(
             "get_delivery_orders",

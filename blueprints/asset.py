@@ -22,7 +22,7 @@ class MapAsset(object):
         config = meta.get_config("asset")
         self.path = config["path"]
 
-    def init(self, mapper=None):
+    def init(self, mapper):
         mapper.connect(
             "upload_asset",
             "/asset/upload",

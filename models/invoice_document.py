@@ -39,7 +39,7 @@ class InvoiceDocument(Model):
         "transaction_type",
         "transaction_date",
         "transaction_status",
-        "is_global",
+        # "is_global",
         "status",
     ]
 

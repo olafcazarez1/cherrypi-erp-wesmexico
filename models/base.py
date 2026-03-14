@@ -14,12 +14,13 @@ class Model(Query):
     """Columns alias"""
 
     _ALIAS = {}
+    _IDS = []
 
     def __init__(self):
         """Constructor"""
         super().__init__(self)
 
-    def get_connection(self, conn: str = "database", uses_pool: bool = False) -> object:
+    def get_connection(self, conn: str = "database", uses_pool: bool = False) -> DBConnector:
         """Get database connection from the Database Pool
 
         Args:

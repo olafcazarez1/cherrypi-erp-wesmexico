@@ -42,7 +42,7 @@ class MapSaleDocument(object):
     def __init__(self):
         pass
 
-    def init(self, mapper=None):
+    def init(self, mapper):
         mapper.connect(
             "get_sales",
             "/sales-documents",
@@ -76,6 +76,14 @@ class MapSaleDocument(object):
         )
 
         mapper.connect(
+            "get_document_balance",
+            "/sale-document/{document_id}/balance",
+            controller=self,
+            action="get_document_balance",
+            conditions=dict(method=["GET", "OPTIONS"]),
+        )
+
+        mapper.connect(
             "get_sales_delivery_addresses",
             "/sales-delivery-addresses",
             controller=self,
@@ -92,11 +100,27 @@ class MapSaleDocument(object):
         )
 
         mapper.connect(
-            "save_payment",
+            "get_document_payment",
             "/sale-document/{document_id}/payment/{payment_id}",
             controller=self,
-            action="save_payment",
+            action="get_document_payment",
+            conditions=dict(method=["GET", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "save_document_payment",
+            "/sale-document/{document_id}/payment/{payment_id}",
+            controller=self,
+            action="save_document_payment",
             conditions=dict(method=["POST", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "cancel_document_payment",
+            "/sale-document/{document_id}/payment/{payment_id}",
+            controller=self,
+            action="cancel_document_payment",
+            conditions=dict(method=["DELETE", "OPTIONS"]),
         )
 
     @tools.cors
@@ -488,13 +512,15 @@ class MapSaleDocument(object):
 
         document["products"] = sorted(products, key=lambda i: i["name"])
 
-        # document["payments"] = (
-        #     DocumentPayment()
-        #     .where({"document_id": document_id})
-        #     .limit(100)
-        #     .order_by(["code"])
-        #     .all(conn=conn, collection=False)
-        # )
+        document["payments"] = (
+            DocumentPayment()
+            .where({"document_id": document_id})
+            .limit(100)
+            .order_by(["created_at", "code"])
+            .all(conn=conn, collection=False)
+        )
+
+        document["balance"] = self.get_document_balance(**kwargs)
 
         items = (
             DocumentInvoice()
@@ -661,6 +687,49 @@ class MapSaleDocument(object):
     @tools.cors
     @cherrypy.tools.json_out()
     @tools.secured()
+    def get_document_balance(self, **kwargs):
+        document_id = kwargs.get("document_id", None)
+
+        conn = SaleDocument().get_connection()
+        document = SaleDocument().where({"document_id": document_id}).one_or_none(conn=conn)
+
+        if document is None:
+            raise cherrypy.HTTPError(404, "Sale Document Not Found")
+
+        payments = (
+            DocumentPayment()
+            .where(
+                {"document_id": document_id},
+                {"status": "active"},
+            )
+            .all(conn=conn, collection=False)
+        )
+
+        paid = sum(item.get("amount") for item in payments) or 0
+        balance = round(document.total - paid, 2)
+
+        print("==================================================================================")
+        print(document.total, paid)
+
+        if balance < 0:
+            balance = 0.0
+
+        return {
+            "document_id": document.document_id,
+            "code": document.code,
+            "transaction_status": document.transaction_status,
+            "currency": document.currency,
+            "exchange_rate": float(document.exchange_rate or 1),
+            "document_total": float(document.total or 0),
+            "paid": paid,
+            "balance": balance,
+            "payments_count": len(payments),
+            "can_collect": balance > 0,
+        }
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @tools.secured()
     def get_payments(self, **kwargs):
         token = kwargs.get("token")
 
@@ -717,15 +786,29 @@ class MapSaleDocument(object):
 
     @tools.cors
     @cherrypy.tools.json_out()
+    @tools.secured()
+    def get_document_payment(self, **kwargs):
+        payment_id = kwargs.get("payment_id", "")
+
+        conn = DocumentPayment().get_connection()
+        document = DocumentPayment().where({"payment_id": payment_id}).one_or_none(conn=conn)
+
+        if document is None:
+            raise cherrypy.HTTPError(404, "Not found")
+
+        return document.as_dict()
+
+    @tools.cors
+    @cherrypy.tools.json_out()
     @cherrypy.tools.json_in()
     @tools.secured()
     @tools.validate_body_params(
         [
-            "payment_id" "document_id",
-            "branch_id",
-            "register_id",
+            "payment_id",
+            "document_id",
             "user_id",
             "transaction_method",
+            "previous_balance",
             "amount",
             "pay_with",
             "change",
@@ -735,11 +818,10 @@ class MapSaleDocument(object):
             "transaction_date",
         ]
     )
-    def save_payment(self, **kwargs):
+    def save_document_payment(self, **kwargs):
         # Get body content
         body = cherrypy.request.json
         document_id = body.get("document_id", None)
-        branch_id = body.get("branch_id", None)
 
         conn = SaleDocument().get_connection()
         document = SaleDocument().where({"document_id": document_id}).one_or_none(conn=conn)
@@ -747,30 +829,85 @@ class MapSaleDocument(object):
         if document is None:
             raise cherrypy.HTTPError(404, "Sale Document Not Found")
 
-        branch = BranchOffice().where({"branch_id": branch_id}).one_or_none(conn=conn)
+        body["branch_id"] = document.branch_id
+        branch = BranchOffice().where({"branch_id": document.branch_id}).one_or_none(conn=conn)
 
         payment = DocumentPayment()
         payment.set_attrs(body, validate_unknown=False)
 
-        payments = DocumentPayment().where({"document_id": document_id}).all(conn=conn, collection=False)
+        payments = (
+            DocumentPayment()
+            .where(
+                {"document_id": document_id},
+                {"status": "active"},
+            )
+            .all(conn=conn, collection=False)
+        )
 
-        paid = float(payment.amount) + sum(item["amount"] for item in payments)
-
+        paid = round(payment.amount + sum(item["amount"] for item in payments), 2)
         if paid > document.total:
             raise cherrypy.HTTPError(406, "Not Aceptable")
 
-        code = "P{prefix}{date}{number}".format(
-            prefix=branch.serie,
-            date=Convert().datetime2str(dt=None, tz=timezone(branch.timezone), format="%d%m%y"),
-            number=Serie.generate(reference="document-payment", key=branch_id, zfill=6, conn=conn),
-        )
+        try:
+            conn.begin(conn)
 
-        payment.code = code
-        payment.reference = document.code
-        payment.is_signed = False
-        payment.status = "active"
-        payment.created_at = datetime.utcnow()
-        payment.updated_at = datetime.utcnow()
-        payment.insert(conn=conn)
+            code = "P{prefix}{date}{number}".format(
+                prefix=branch.serie or "",
+                date=Convert().datetime2str(dt=None, tz=timezone(branch.timezone), format="%d%m%y"),
+                number=Serie.generate(reference="document-payment", key=document.branch_id, zfill=6, conn=conn),
+            )
+
+            payment.code = code
+            payment.reference = document.code
+            payment.is_signed = False
+            payment.status = "active"
+            payment.created_at = datetime.utcnow()
+            payment.updated_at = datetime.utcnow()
+            payment.insert(conn=conn)
+
+            if payment.balance == 0:
+                document.transaction_status = "paid"
+                document.update(conn=conn)
+
+            conn.commit(conn)
+        except Exception as e:
+            # Rollback changes
+            conn.rollback(conn)
+            raise cherrypy.HTTPError(500, "Problem saving data: {}".format(str(e)))
+
+        return {}
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    def cancel_document_payment(self, **kwargs):
+        document_id = kwargs.get("document_id", None)
+        payment_id = kwargs.get("payment_id", None)
+
+        conn = SaleDocument().get_connection()
+        document = SaleDocument().where({"document_id": document_id}).one_or_none(conn=conn)
+        if document is None:
+            raise cherrypy.HTTPError(404, "Not Found")
+
+        payment = DocumentPayment().where({"payment_id": payment_id}).one_or_none(conn=conn)
+        if payment is None:
+            raise cherrypy.HTTPError(404, "Not found")
+
+        try:
+            conn.begin(conn)
+
+            document.transaction_status = "pending"
+            document.update(conn=conn)
+
+            payment.status = "inactive"
+            payment.updated_at = datetime.utcnow()
+            payment.update(conn=conn)
+
+            conn.commit(conn)
+        except Exception as e:
+            # Rollback changes
+            conn.rollback(conn)
+            raise cherrypy.HTTPError(500, "Problem saving data: {}".format(str(e)))
 
         return {}

@@ -18,7 +18,7 @@ class MapHelpers(object):
     def __init__(self):
         pass
 
-    def init(self, mapper=None):
+    def init(self, mapper):
         mapper.connect(
             "send_signed_invoice",
             "/helper/send-signed-invoice/{invoice_id}",

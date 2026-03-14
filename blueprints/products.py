@@ -91,7 +91,7 @@ class MapProducts(object):
     def __init__(self):
         pass
 
-    def init(self, mapper=None):
+    def init(self, mapper):
         mapper.connect(
             "get_products",
             "/catalog/products",

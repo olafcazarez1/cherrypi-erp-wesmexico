@@ -24,11 +24,11 @@ class DocumentPayment(Model):
         "payment_id",
         "document_id",
         "branch_id",
-        "register_id",
         "user_id",
         "reference",
         "code",
         "transaction_method",
+        "previous_balance",
         "amount",
         "pay_with",
         "change",
@@ -152,37 +152,6 @@ class DocumentPayment(Model):
             >>> self.document_id = document_id
         """
         self.__document_id = document_id
-
-    @property
-    def register_id(self):
-        """Getter register_id
-
-        Args:
-
-        Returns:
-            string: register_id value
-
-        Usage:
-            >>> register_id = self.register_id
-        """
-        try:
-            return self.__register_id
-        except AttributeError:
-            return None
-
-    @register_id.setter
-    def register_id(self, register_id):
-        """Setter register_id
-
-        Args:
-            register_id(string): register_id.
-
-        Returns:
-
-        Usage:
-            >>> self.register_id = register_id
-        """
-        self.__register_id = register_id
 
     @property
     def user_id(self):
@@ -369,6 +338,37 @@ class DocumentPayment(Model):
             >>> self.change = change
         """
         self.__change = change
+
+    @property
+    def previous_balance(self):
+        """Getter previous_balance
+
+        Args:
+
+        Returns:
+            double: previous_balance value
+
+        Usage:
+            >>> previous_balance = self.previous_balance
+        """
+        try:
+            return self.__previous_balance
+        except AttributeError:
+            return None
+
+    @previous_balance.setter
+    def previous_balance(self, previous_balance):
+        """Setter previous_balance
+
+        Args:
+            previous_balance(double): previous_balance.
+
+        Returns:
+
+        Usage:
+            >>> self.previous_balance = previous_balance
+        """
+        self.__previous_balance = previous_balance
 
     @property
     def amount(self):
