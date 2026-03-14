@@ -708,9 +708,6 @@ class MapSaleDocument(object):
         paid = sum(item.get("amount") for item in payments) or 0
         balance = round(document.total - paid, 2)
 
-        print("==================================================================================")
-        print(document.total, paid)
-
         if balance < 0:
             balance = 0.0
 
