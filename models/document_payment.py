@@ -27,6 +27,7 @@ class DocumentPayment(Model):
         "user_id",
         "reference",
         "code",
+        "serie",
         "transaction_method",
         "previous_balance",
         "amount",
@@ -245,6 +246,37 @@ class DocumentPayment(Model):
             >>> self.code = code
         """
         self.__code = code
+
+    @property
+    def serie(self):
+        """Getter serie
+
+        Args:
+
+        Returns:
+            string: serie value
+
+        Usage:
+            >>> serie = self.serie
+        """
+        try:
+            return self.__serie
+        except AttributeError:
+            return None
+
+    @serie.setter
+    def serie(self, serie):
+        """Setter serie
+
+        Args:
+            serie(string): serie.
+
+        Returns:
+
+        Usage:
+            >>> self.serie = serie
+        """
+        self.__serie = serie
 
     @property
     def transaction_method(self):

@@ -796,6 +796,14 @@ class MapSaleDocument(object):
         payment = payment.as_dict()
 
         document = SaleDocument().where({"document_id": payment["document_id"]}).one_or_none(conn=conn).as_dict()
+        invoice = (
+            DocumentInvoice()
+            .where({"document_id": document["document_id"]}, {"statis", "active"})
+            .one_or_none(conn=conn)
+        )
+
+        if invoice:
+            payment["invoice"] = invoice.as_dict()
 
         payment["user"] = User().where({"user_id": document["user_id"]}).one_or_none(conn=conn).as_dict()
 
@@ -872,6 +880,15 @@ class MapSaleDocument(object):
 
         payment = DocumentPayment()
         payment.set_attrs(body, validate_unknown=False)
+
+        payment.serie = (
+            DocumentPayment()
+            .where(
+                {"document_id": document_id},
+            )
+            .count(conn=conn)
+            + 1
+        )
 
         payments = (
             DocumentPayment()
