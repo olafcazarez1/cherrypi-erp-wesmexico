@@ -806,7 +806,7 @@ class MapSaleDocument(object):
             payment["invoice"] = (
                 InvoiceDocument()
                 .where(
-                    {"invoice_id": related["invoice_id"]},
+                    {"invoice_id": related.invoice_id},
                 )
                 .one_or_none(conn=conn)
                 .as_dict()
