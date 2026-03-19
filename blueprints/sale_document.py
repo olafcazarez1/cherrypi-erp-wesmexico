@@ -788,12 +788,53 @@ class MapSaleDocument(object):
         payment_id = kwargs.get("payment_id", "")
 
         conn = DocumentPayment().get_connection()
-        document = DocumentPayment().where({"payment_id": payment_id}).one_or_none(conn=conn)
+        payment = DocumentPayment().where({"payment_id": payment_id}).one_or_none(conn=conn)
 
-        if document is None:
+        if payment is None:
             raise cherrypy.HTTPError(404, "Not found")
 
-        return document.as_dict()
+        payment = payment.as_dict()
+
+        document = SaleDocument().where({"document_id": payment["document_id"]}).one_or_none(conn=conn).as_dict()
+
+        payment["user"] = User().where({"user_id": document["user_id"]}).one_or_none(conn=conn).as_dict()
+
+        payment["seller"] = Employee().where({"employee_id": document["seller_id"]}).one_or_none(conn=conn).as_dict()
+
+        payment["company"] = Company().where({"company_id": document["company_id"]}).one_or_none(conn=conn).as_dict()
+
+        payment["branch"] = BranchOffice().where({"branch_id": document["branch_id"]}).one_or_none(conn=conn).as_dict()
+
+        payment["client"] = Client().where({"client_id": document["client_id"]}).one_or_none(conn=conn).as_dict()
+
+        payment["client"]["state"] = (
+            State().where({"state_id": payment["client"]["state_id"]}).one_or_none(conn=conn).as_dict()
+        )
+
+        payment["client"]["municipality"] = (
+            Municipality()
+            .where(
+                {"state_id": payment["client"]["state_id"]},
+                {"municipality_id": payment["client"]["municipality_id"]},
+            )
+            .one_or_none(conn=conn)
+            .as_dict()
+        )
+
+        payment["client"]["locality"] = (
+            Locality()
+            .where(
+                {"state_id": payment["client"]["state_id"]},
+                {"municipality_id": payment["client"]["municipality_id"]},
+                {"locality_id": payment["client"]["locality_id"]},
+            )
+            .one_or_none(conn=conn)
+            .as_dict()
+        )
+
+        payment["sale"] = document
+
+        return payment
 
     @tools.cors
     @cherrypy.tools.json_out()
