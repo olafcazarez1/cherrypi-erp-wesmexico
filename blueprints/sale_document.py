@@ -798,7 +798,7 @@ class MapSaleDocument(object):
         document = SaleDocument().where({"document_id": payment["document_id"]}).one_or_none(conn=conn).as_dict()
         invoice = (
             DocumentInvoice()
-            .where({"document_id": document["document_id"]}, {"statis", "active"})
+            .where({"document_id": document["document_id"]}, {"status", "active"})
             .one_or_none(conn=conn)
         )
 
