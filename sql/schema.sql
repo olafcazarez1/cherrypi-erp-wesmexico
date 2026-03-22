@@ -1044,7 +1044,7 @@ CREATE TABLE `invoiced_documents` (
 	`discount` DOUBLE NOT NULL DEFAULT 0.00,
 	`taxes` DOUBLE NOT NULL DEFAULT 0.00,
 	`total` DOUBLE NOT NULL DEFAULT 0.00,
-	`transaction_method` ENUM('cash', 'credit_card', 'debit_card', 'tansfer', 'other') DEFAULT 'cash',
+	`transaction_method` ENUM('cash', 'credit_card', 'debit_card', 'transfer', 'other') DEFAULT 'cash',
 	`transaction_type` ENUM('full_payment', 'payment_in_installments') DEFAULT 'full_payment',
 	`transaction_date` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
 	`transaction_status` ENUM('pending', 'paid') DEFAULT 'pending',

@@ -116,6 +116,14 @@ class MapSaleDocument(object):
         )
 
         mapper.connect(
+            "patch_document_payment",
+            "/sale-document/{document_id}/payment/{payment_id}",
+            controller=self,
+            action="patch_document_payment",
+            conditions=dict(method=["PATCH", "OPTIONS"]),
+        )
+
+        mapper.connect(
             "cancel_document_payment",
             "/sale-document/{document_id}/payment/{payment_id}",
             controller=self,
@@ -931,6 +939,35 @@ class MapSaleDocument(object):
                 document.transaction_status = "paid"
                 document.update(conn=conn)
 
+            conn.commit(conn)
+        except Exception as e:
+            # Rollback changes
+            conn.rollback(conn)
+            raise cherrypy.HTTPError(500, "Problem saving data: {}".format(str(e)))
+
+        return {}
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    def patch_document_payment(self, **kwargs):
+        # Get body content
+        body = cherrypy.request.json
+        payment_id = kwargs.get("payment_id", None)
+
+        conn = DocumentPayment().get_connection()
+        document = DocumentPayment().where({"payment_id": payment_id}).one_or_none(conn=conn)
+
+        if document is None:
+            raise cherrypy.HTTPError(404, "Not Found")
+
+        try:
+            conn.begin(conn)
+
+            document.set_attrs(body, validate_unknown=False)
+            document.updated_at = datetime.utcnow()
+            document.update(conn=conn)
             conn.commit(conn)
         except Exception as e:
             # Rollback changes
