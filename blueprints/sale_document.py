@@ -220,9 +220,11 @@ class MapSaleDocument(object):
             "discount",
             "taxes",
             "total",
-            "transaction_method",
+            "payment_method",
+            "payment_type",
+            "fiscal_use",
+            "payment_status",
             "transaction_date",
-            "transaction_status",
             "products",
             # "-payments",
         ]
@@ -722,7 +724,7 @@ class MapSaleDocument(object):
         return {
             "document_id": document.document_id,
             "code": document.code,
-            "transaction_status": document.transaction_status,
+            "payment_status": document.payment_status,
             "currency": document.currency,
             "exchange_rate": float(document.exchange_rate or 1),
             "document_total": float(document.total or 0),
@@ -868,7 +870,7 @@ class MapSaleDocument(object):
             "payment_id",
             "document_id",
             "user_id",
-            "transaction_method",
+            "payment_method",
             "previous_balance",
             "amount",
             "pay_with",
@@ -936,7 +938,7 @@ class MapSaleDocument(object):
             payment.insert(conn=conn)
 
             if payment.balance == 0:
-                document.transaction_status = "paid"
+                document.payment_status = "paid"
                 document.update(conn=conn)
 
             conn.commit(conn)
@@ -996,7 +998,7 @@ class MapSaleDocument(object):
         try:
             conn.begin(conn)
 
-            document.transaction_status = "pending"
+            document.payment_status = "pending"
             document.update(conn=conn)
 
             payment.status = "inactive"

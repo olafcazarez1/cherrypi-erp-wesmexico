@@ -36,10 +36,11 @@ class SaleDocument(Model):
         "discount",
         "taxes",
         "total",
-        "transaction_method",
-        # "transaction_type",
+        "payment_method",
+        "payment_type",
+        "payment_status",
+        "fiscal_use",
         "transaction_date",
-        "transaction_status",
         "is_signed",
         "status",
     ]
@@ -531,35 +532,128 @@ class SaleDocument(Model):
         self.__total = total
 
     @property
-    def transaction_method(self):
-        """Getter transaction_method
+    def payment_method(self):
+        """Getter payment_method
 
         Args:
 
         Returns:
-            string: transaction_method value
+            string: payment_method value
 
         Usage:
-            >>> transaction_method = self.transaction_method
+            >>> payment_method = self.payment_method
         """
         try:
-            return self.__transaction_method
+            return self.__payment_method
         except AttributeError:
             return "active"
 
-    @transaction_method.setter
-    def transaction_method(self, transaction_method):
-        """Setter transaction_method
+    @payment_method.setter
+    def payment_method(self, payment_method):
+        """Setter payment_method
 
         Args:
-            transaction_method(string): transaction_method.
+            payment_method(string): payment_method.
 
         Returns:
 
         Usage:
-            >>> self.transaction_method = transaction_method
+            >>> self.payment_method = payment_method
         """
-        self.__transaction_method = transaction_method
+        self.__payment_method = payment_method
+
+    @property
+    def payment_type(self):
+        """Getter payment_type
+
+        Args:
+
+        Returns:
+            string: payment_type value
+
+        Usage:
+            >>> payment_type = self.payment_type
+        """
+        try:
+            return self.__payment_type
+        except AttributeError:
+            return "active"
+
+    @payment_type.setter
+    def payment_type(self, payment_type):
+        """Setter payment_type
+
+        Args:
+            payment_type(string): payment_type.
+
+        Returns:
+
+        Usage:
+            >>> self.payment_type = payment_type
+        """
+        self.__payment_type = payment_type
+
+    @property
+    def fiscal_use(self):
+        """Getter fiscal_use
+
+        Args:
+
+        Returns:
+            string: fiscal_use value
+
+        Usage:
+            >>> fiscal_use = self.fiscal_use
+        """
+        try:
+            return self.__fiscal_use
+        except AttributeError:
+            return "active"
+
+    @fiscal_use.setter
+    def fiscal_use(self, fiscal_use):
+        """Setter fiscal_use
+
+        Args:
+            fiscal_use(string): fiscal_use.
+
+        Returns:
+
+        Usage:
+            >>> self.fiscal_use = fiscal_use
+        """
+        self.__fiscal_use = fiscal_use
+
+    @property
+    def payment_status(self):
+        """Getter payment_status
+
+        Args:
+
+        Returns:
+            string: payment_status value
+
+        Usage:
+            >>> payment_status = self.payment_status
+        """
+        try:
+            return self.__payment_status
+        except AttributeError:
+            return "active"
+
+    @payment_status.setter
+    def payment_status(self, payment_status):
+        """Setter payment_status
+
+        Args:
+            payment_status(string): payment_status.
+
+        Returns:
+
+        Usage:
+            >>> self.payment_status = payment_status
+        """
+        self.__payment_status = payment_status
 
     @property
     def transaction_date(self):
@@ -591,37 +685,6 @@ class SaleDocument(Model):
             >>> self.transaction_date = transaction_date
         """
         self.__transaction_date = transaction_date
-
-    @property
-    def transaction_status(self):
-        """Getter transaction_status
-
-        Args:
-
-        Returns:
-            string: transaction_status value
-
-        Usage:
-            >>> transaction_status = self.transaction_status
-        """
-        try:
-            return self.__transaction_status
-        except AttributeError:
-            return "active"
-
-    @transaction_status.setter
-    def transaction_status(self, transaction_status):
-        """Setter transaction_status
-
-        Args:
-            transaction_status(string): transaction_status.
-
-        Returns:
-
-        Usage:
-            >>> self.transaction_status = transaction_status
-        """
-        self.__transaction_status = transaction_status
 
     @property
     def is_signed(self):
