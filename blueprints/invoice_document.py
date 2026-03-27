@@ -1,3 +1,4 @@
+import uuid
 import cherrypy
 
 from datetime import datetime
@@ -22,6 +23,8 @@ from models.invoice_document_product import InvoiceDocumentProduct
 from models.invoice_document_product_tax import InvoiceDocumentProductTax
 from models.document_invoice import DocumentInvoice
 from models.sale_document import SaleDocument
+from models.sale_document_product import SaleDocumentProduct
+from models.sale_document_tax import SaleDocumentTax
 
 from models.user import User
 from models.client import Client
@@ -74,6 +77,14 @@ class MapInvoiceDocument(object):
         # 	action='cancel_invoice_document',
         # 	conditions=dict(method=['DELETE', 'OPTIONS'])
         # )
+
+        mapper.connect(
+            "generate_invoice_from_document",
+            "/document/{document_id}/generate-invoice",
+            controller=self,
+            action="generate_invoice_from_document",
+            conditions=dict(method=["POST", "OPTIONS"]),
+        )
 
     @tools.cors
     @cherrypy.tools.json_out()
@@ -498,3 +509,79 @@ class MapInvoiceDocument(object):
     # 			)
 
     # 	return {}
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    def generate_invoice_from_document(self, **kwargs):
+        # Get body content
+        document_id = kwargs.get("document_id", None)
+        invoice_id = str(uuid.uuid4())
+
+        conn = SaleDocument().get_connection()
+        document = SaleDocument().where({"document_id": document_id}).one_or_none(conn=conn)
+
+        if document is None:
+            raise cherrypy.HTTPError(404, "Not Found")
+
+        company = Company().where({"company_id": document.company_id}).one_or_none(conn=conn)
+        branch = BranchOffice().where({"branch_id": document.branch_id}).one_or_none(conn=conn)
+
+        try:
+            conn.begin(conn)
+
+            code = "F{serie}{branch}{date}{number}".format(
+                serie=company.serie,
+                branch=branch.code,
+                date=Convert().datetime2str(dt=None, tz=timezone(branch.timezone), format="%d%m%y"),
+                number=Serie.generate(reference="invoice-document", key=document.branch_id, zfill=6, conn=conn),
+            )
+
+            invoice = InvoiceDocument()
+            invoice.set_attrs(document.as_dict(), validate_unknown=False, ignore_restricted=True)
+            invoice.invoice_id = invoice_id
+            invoice.code = code
+            invoice.payment_method_id = document.payment_method
+            invoice.payment_type_id = document.payment_type
+            invoice.receipt_type_id = document.fiscal_use
+            invoice.status = "pending"
+            print(invoice.as_dict())
+            invoice.insert(conn=conn)
+
+            products = SaleDocumentProduct().where({"document_id": document_id}).all(conn=conn, collection=False)
+            for item in products:
+
+                product = InvoiceDocumentProduct()
+                product.invoice_id = invoice_id
+                product.set_attrs(item, validate_unknown=False, ignore_restricted=True)
+                product.insert(conn=conn)
+
+                # Get Product taxes
+                taxes = (
+                    SaleDocumentTax()
+                    .where({"document_id": document_id}, {"product_id": product.product_id})
+                    .all(conn=conn, collection=False)
+                )
+
+                for tax in taxes:
+                    product_tax = InvoiceDocumentProductTax()
+                    product_tax.invoice_id = invoice_id
+                    product_tax.set_attrs(tax, validate_unknown=False, ignore_restricted=True)
+                    product_tax.insert(conn=conn)
+
+            relation = DocumentInvoice()
+            relation.invoice_id = invoice_id
+            relation.document_id = document_id
+            relation.status = "active"
+            relation.created_at = document.created_at
+            relation.updated_at = document.updated_at
+            relation.insert(conn=conn)
+
+            conn.commit(conn)
+        except Exception as e:
+            # Rollback changes
+            conn.rollback(conn)
+            raise cherrypy.HTTPError(500, "Problem saving data: {}".format(str(e)))
+
+        return invoice.as_dict()

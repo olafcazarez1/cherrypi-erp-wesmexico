@@ -35,10 +35,10 @@ class InvoiceDocument(Model):
         "discount",
         "taxes",
         "total",
-        "transaction_method",
-        "transaction_type",
-        "transaction_date",
-        "transaction_status",
+        # "transaction_method",
+        # "transaction_type",
+        # "transaction_date",
+        "payment_status",
         # "is_global",
         "status",
     ]
@@ -685,35 +685,35 @@ class InvoiceDocument(Model):
         self.__transaction_date = transaction_date
 
     @property
-    def transaction_status(self):
-        """Getter transaction_status
+    def payment_status(self):
+        """Getter payment_status
 
         Args:
 
         Returns:
-            string: transaction_status value
+            string: payment_status value
 
         Usage:
-            >>> transaction_status = self.transaction_status
+            >>> payment_status = self.payment_status
         """
         try:
-            return self.__transaction_status
+            return self.__payment_status
         except AttributeError:
             return "pending"
 
-    @transaction_status.setter
-    def transaction_status(self, transaction_status):
-        """Setter transaction_status
+    @payment_status.setter
+    def payment_status(self, payment_status):
+        """Setter payment_status
 
         Args:
-            transaction_status(string): transaction_status.
+            payment_status(string): payment_status.
 
         Returns:
 
         Usage:
-            >>> self.transaction_status = transaction_status
+            >>> self.payment_status = payment_status
         """
-        self.__transaction_status = transaction_status
+        self.__payment_status = payment_status
 
     @property
     def is_global(self):
