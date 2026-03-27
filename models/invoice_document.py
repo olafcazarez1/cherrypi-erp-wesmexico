@@ -592,68 +592,6 @@ class InvoiceDocument(Model):
         self.__total = total
 
     @property
-    def transaction_method(self):
-        """Getter transaction_method
-
-        Args:
-
-        Returns:
-            string: transaction_method value
-
-        Usage:
-            >>> transaction_method = self.transaction_method
-        """
-        try:
-            return self.__transaction_method
-        except AttributeError:
-            return "active"
-
-    @transaction_method.setter
-    def transaction_method(self, transaction_method):
-        """Setter transaction_method
-
-        Args:
-            transaction_method(string): transaction_method.
-
-        Returns:
-
-        Usage:
-            >>> self.transaction_method = transaction_method
-        """
-        self.__transaction_method = transaction_method
-
-    @property
-    def transaction_type(self):
-        """Getter transaction_type
-
-        Args:
-
-        Returns:
-            string: transaction_type value
-
-        Usage:
-            >>> transaction_type = self.transaction_type
-        """
-        try:
-            return self.__transaction_type
-        except AttributeError:
-            return "full_payment"
-
-    @transaction_type.setter
-    def transaction_type(self, transaction_type):
-        """Setter transaction_type
-
-        Args:
-            transaction_type(string): transaction_type.
-
-        Returns:
-
-        Usage:
-            >>> self.transaction_type = transaction_type
-        """
-        self.__transaction_type = transaction_type
-
-    @property
     def transaction_date(self):
         """Getter transaction_date
 
