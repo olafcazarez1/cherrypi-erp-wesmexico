@@ -525,6 +525,11 @@ class MapInvoiceDocument(object):
         if document is None:
             raise cherrypy.HTTPError(404, "Not Found")
 
+        # check is exist an active invoice related
+        relation = DocumentInvoice().where({"document_id": document_id}, {"status": "active"}).one_or_none()
+        if relation:
+            return InvoiceDocument().where({"invoice_id": relation.invoice_id}).one_or_none(conn=conn).as_dict()
+
         company = Company().where({"company_id": document.company_id}).one_or_none(conn=conn)
         branch = BranchOffice().where({"branch_id": document.branch_id}).one_or_none(conn=conn)
 
