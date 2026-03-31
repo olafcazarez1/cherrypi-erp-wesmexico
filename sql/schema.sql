@@ -1009,7 +1009,7 @@ create table `sales_documents_payments` (
 	`reference` CHAR(32) DEFAULT '',
 	`code` CHAR(32) DEFAULT '',
 	`serie` int(10) unsigned DEFAULT 0,
-	`transaction_method` ENUM('transfer', 'cash', 'debit_card', 'credit_card') DEFAULT 'cash',
+	`payment_method` char(36) not null default '',
 	`pay_with` DOUBLE NOT NULL DEFAULT 0.00,
 	`change` DOUBLE NOT NULL DEFAULT 0.00,
 	`previous_balance` double not null default 0.00,

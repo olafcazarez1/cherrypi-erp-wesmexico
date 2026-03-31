@@ -36,3 +36,6 @@ ALTER TABLE `sales_documents` ADD UNIQUE KEY (`company_id`, `code`);
 
 ALTER TABLE `invoiced_documents` DROP KEY `code`;
 ALTER TABLE `invoiced_documents` ADD UNIQUE KEY (`company_id`, `code`);
+
+
+ALTER TABLE `sales_documents_payments` CHANGE `transaction_method` `payment_method` char(36) not null default '';

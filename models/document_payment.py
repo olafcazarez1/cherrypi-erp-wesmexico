@@ -28,7 +28,7 @@ class DocumentPayment(Model):
         "reference",
         "code",
         "serie",
-        "transaction_method",
+        "payment_method",
         "previous_balance",
         "amount",
         "pay_with",
@@ -279,35 +279,35 @@ class DocumentPayment(Model):
         self.__serie = serie
 
     @property
-    def transaction_method(self):
-        """Getter transaction_method
+    def payment_method(self):
+        """Getter payment_method
 
         Args:
 
         Returns:
-            string: transaction_method value
+            string: payment_method value
 
         Usage:
-            >>> transaction_method = self.transaction_method
+            >>> payment_method = self.payment_method
         """
         try:
-            return self.__transaction_method
+            return self.__payment_method
         except AttributeError:
             return "active"
 
-    @transaction_method.setter
-    def transaction_method(self, transaction_method):
-        """Setter transaction_method
+    @payment_method.setter
+    def payment_method(self, payment_method):
+        """Setter payment_method
 
         Args:
-            transaction_method(string): transaction_method.
+            payment_method(string): payment_method.
 
         Returns:
 
         Usage:
-            >>> self.transaction_method = transaction_method
+            >>> self.payment_method = payment_method
         """
-        self.__transaction_method = transaction_method
+        self.__payment_method = payment_method
 
     @property
     def pay_with(self):
