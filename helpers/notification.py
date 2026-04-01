@@ -188,3 +188,68 @@ class Notification(object):
         s.close()
 
         return True
+
+    def send_sale_note(self, data: dict = None):
+        file_path = "{base}/notification_templates/{template}".format(
+            base=os.path.dirname(os.path.abspath(__file__)), template="send_sale.tpl.html"
+        )
+
+        document = data["document"]
+
+        to = [
+            "olaf.cazarez@wesmexico.com",
+            "juancarlos.valenzuela@wesmexico.com",
+            # document["client"]["email"]
+        ]
+        cc = []
+        bcc = []
+
+        if "cc" in data:
+            cc = data["cc"]
+
+        if "bcc" in data:
+            bcc = data["bcc"]
+
+        f = open(file_path, "r")
+        content = f.read()
+
+        content = content.replace("#client_name#", document["client"]["legal_name"])
+
+        content = content.replace("#total#", "{:.2f}".format(document["total"]))
+
+        """ Create a text/plain message """
+        subject = "{} - Nota de venta {} ".format(
+            document["company"]["trade_name"],
+            document["code"],
+        )
+
+        msg = MIMEMultipart()
+        msg["Subject"] = Header(subject.encode("utf-8"), "utf-8")
+
+        msg["From"] = self.__settings["user"]
+
+        msg["To"] = ",".join(to)
+        msg["Cc"] = ",".join(cc)
+
+        """ The main body is just another attachment """
+        body = MIMEText(content.encode("utf-8"), "html", _charset="utf-8")
+
+        attachment = MIMEApplication(data["report"].read(), _subtype="zip")
+        attachment.add_header("Content-Disposition", "attachment", filename=str(data["report_name"]))
+
+        msg.attach(body)
+        msg.attach(attachment)
+
+        # Create a secure SSL context
+        ssl.create_default_context()
+
+        # print(self.__settings)
+        s = smtplib.SMTP_SSL(self.__settings["server"], self.__settings["port"])
+
+        s.login(self.__settings["user"], self.__settings["password"])
+
+        s.sendmail(self.__settings["user"], to + cc + bcc, msg.as_string())
+
+        s.close()
+
+        return True

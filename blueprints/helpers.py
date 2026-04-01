@@ -2,9 +2,11 @@ import json
 import cherrypy
 import urllib
 
+from models.company import Company
 from models.branch_office import BranchOffice
 from models.client import Client
 from models.invoice_document import InvoiceDocument
+from models.sale_document import SaleDocument
 from models.product_unit import ProductUnit
 
 from utils.query import Query
@@ -24,6 +26,14 @@ class MapHelpers(object):
             "/helper/send-signed-invoice/{invoice_id}",
             controller=self,
             action="send_signed_invoice",
+            conditions=dict(method=["POST", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "send_sale_note",
+            "/helper/send-sale-note/{document_id}",
+            controller=self,
+            action="send_sale_note",
             conditions=dict(method=["POST", "OPTIONS"]),
         )
 
@@ -57,6 +67,15 @@ class MapHelpers(object):
     def send_signed_invoice(self, **kwargs):
         # Get body content
         invoice_id = kwargs.get("invoice_id", None)
+        action = kwargs.get(
+            "action",
+            {
+                "classe": "ErpGenericReporter",
+                "method": "getSignedInvoice",
+                "is_static": "true",
+                "params": {"invoice_id": invoice_id},
+            },
+        )
 
         conn = InvoiceDocument().get_connection()
         query = Query(model=InvoiceDocument())
@@ -71,19 +90,6 @@ class MapHelpers(object):
         )
 
         document["client"] = Client().where({"client_id": document["client_id"]}).one_or_none(conn=conn).as_dict()
-
-        # bcc_emails = (
-        # 	BranchOfficeEmail()
-        # 	.where(
-        # 		{'branch_id': document['branch_id']},
-        # 		{'status': 'active'}
-        # 	).order_by(
-        # 		['email']
-        # 	).all(
-        # 		conn = conn,
-        # 		collection=False
-        # 	)
-        # )
         bcc_emails = []
 
         meta = MetaConfig.instance()
@@ -91,18 +97,7 @@ class MapHelpers(object):
         url = "http://{server}/{endpoint}?{args}"
         try:
             # This urlencodes your data (that's why we need to import urllib at the top)
-            query_args = urllib.parse.urlencode(
-                {
-                    "action": json.dumps(
-                        {
-                            "classe": "ErpWesmexico",
-                            "method": "getSignedInvoice",
-                            "is_static": "true",
-                            "params": {"invoice_id": invoice_id},
-                        }
-                    )
-                }
-            )
+            query_args = urllib.parse.urlencode({"action": json.dumps(action)})
 
             req = urllib.request.Request(
                 url=url.format(
@@ -114,6 +109,8 @@ class MapHelpers(object):
                     "Access-Token": cherrypy.request.headers.get("Access-Token"),
                     "Client-Identifier": cherrypy.request.headers.get("Client-Identifier"),
                     "Authorization": cherrypy.request.headers.get("Authorization"),
+                    "Referer": cherrypy.request.headers.get("Referer"),
+                    "Origin": cherrypy.request.headers.get("Referer"),
                 },
             )
             result = urllib.request.urlopen(req)
@@ -139,6 +136,92 @@ class MapHelpers(object):
 
         notification = Notification()
         notification.send_signed_invoice(
+            {
+                "report": report,
+                "report_name": response["report_name"],
+                "document": document,
+                "bcc": [entry["email"] for entry in bcc_emails],
+            }
+        )
+
+        return {}
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @tools.secured()
+    def send_sale_note(self, **kwargs):
+        # Get body content
+        document_id = kwargs.get("document_id", None)
+        action = kwargs.get(
+            "action",
+            {
+                "classe": "ErpGenericReporter",
+                "method": "getSaleDocument",
+                "is_static": "true",
+                "params": {"document_id": document_id},
+            },
+        )
+
+        conn = SaleDocument().get_connection()
+        query = Query(model=SaleDocument())
+        document = query.where({"document_id": document_id}).one_or_none(conn=conn)
+
+        if document is None:
+            raise cherrypy.HTTPError(404, "Not found")
+
+        document = document.as_dict()
+        document["company"] = Company().where({"company_id": document["company_id"]}).one_or_none(conn=conn).as_dict()
+        document["branch"] = (
+            BranchOffice().where({"branch_id": document["branch_id"]}).one_or_none(conn=conn).as_dict()
+        )
+        document["client"] = Client().where({"client_id": document["client_id"]}).one_or_none(conn=conn).as_dict()
+        bcc_emails = []
+
+        meta = MetaConfig.instance()
+        settings = meta.get_config("settings")
+        print(settings)
+        url = "http://{server}/{endpoint}?{args}"
+        try:
+            # This urlencodes your data (that's why we need to import urllib at the top)
+            query_args = urllib.parse.urlencode({"action": json.dumps(action)})
+            req = urllib.request.Request(
+                url=url.format(
+                    server=settings["pdf-reports-host"],
+                    endpoint="data.php",
+                    args=query_args,
+                ),
+                headers={
+                    "Access-Token": cherrypy.request.headers.get("Access-Token"),
+                    "Client-Identifier": cherrypy.request.headers.get("Client-Identifier"),
+                    "Authorization": cherrypy.request.headers.get("Authorization"),
+                    "Referer": cherrypy.request.headers.get("Referer"),
+                    "Origin": cherrypy.request.headers.get("Referer"),
+                },
+            )
+
+            result = urllib.request.urlopen(req)
+            response = json.loads(result.read().decode("utf-8"))
+
+            # download report
+            req = urllib.request.Request(
+                url=url.format(
+                    server=settings["pdf-reports-host"],
+                    endpoint="download.php",
+                    args=urllib.parse.urlencode({"filename": response["report_name"]}),
+                ),
+                headers={
+                    "Access-Token": cherrypy.request.headers.get("Access-Token"),
+                    "Client-Identifier": cherrypy.request.headers.get("Client-Identifier"),
+                    "Authorization": cherrypy.request.headers.get("Authorization"),
+                },
+            )
+            report = urllib.request.urlopen(req)
+
+        except urllib.error.HTTPError as e:
+            raise cherrypy.HTTPError(e.code, e.reason)
+
+        notification = Notification()
+        notification.send_sale_note(
             {
                 "report": report,
                 "report_name": response["report_name"],
