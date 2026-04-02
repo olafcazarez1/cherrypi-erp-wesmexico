@@ -62,12 +62,16 @@ class MapHelpers(object):
         )
 
     @tools.cors
+    @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     @tools.secured()
     def send_signed_invoice(self, **kwargs):
-        # Get body content
         invoice_id = kwargs.get("invoice_id", None)
-        action = kwargs.get(
+        # Get body content
+        body = cherrypy.request.json
+
+        to = body.get("to-email", None)
+        action = body.get(
             "action",
             {
                 "classe": "ErpGenericReporter",
@@ -140,6 +144,7 @@ class MapHelpers(object):
                 "report": report,
                 "report_name": response["report_name"],
                 "document": document,
+                "to": [to],
                 "bcc": [entry["email"] for entry in bcc_emails],
             }
         )
@@ -147,12 +152,16 @@ class MapHelpers(object):
         return {}
 
     @tools.cors
+    @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     @tools.secured()
     def send_sale_note(self, **kwargs):
-        # Get body content
         document_id = kwargs.get("document_id", None)
-        action = kwargs.get(
+        # Get body content
+        body = cherrypy.request.json
+
+        to = body.get("to-email", None)
+        action = body.get(
             "action",
             {
                 "classe": "ErpGenericReporter",
@@ -179,7 +188,6 @@ class MapHelpers(object):
 
         meta = MetaConfig.instance()
         settings = meta.get_config("settings")
-        print(settings)
         url = "http://{server}/{endpoint}?{args}"
         try:
             # This urlencodes your data (that's why we need to import urllib at the top)
@@ -226,6 +234,7 @@ class MapHelpers(object):
                 "report": report,
                 "report_name": response["report_name"],
                 "document": document,
+                "to": [to],
                 "bcc": [entry["email"] for entry in bcc_emails],
             }
         )
