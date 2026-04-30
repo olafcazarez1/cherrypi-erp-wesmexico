@@ -58,6 +58,10 @@ class PurchaseOrderDocument(Model):
     transaction_date = Model.field("transaction_date")
     notes = Model.field("notes", "")
 
+    is_approved = Model.field("is_approved", 0)
+    approved_by = Model.field("approved_by")
+    approved_at = Model.field("approved_at")
+
     status = Model.field("status", "new")
 
     created_at = Model.field("created_at")

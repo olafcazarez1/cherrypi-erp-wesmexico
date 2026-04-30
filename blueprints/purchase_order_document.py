@@ -305,6 +305,8 @@ class MapPurchaseOrderDocument(object):
     @cherrypy.tools.json_in()
     @tools.secured()
     def patch_purchase_order(self, **kwargs):
+        token = kwargs.get("token")
+
         purchase_order_id = kwargs.get("purchase_order_id", None)
         body = cherrypy.request.json
 
@@ -322,6 +324,13 @@ class MapPurchaseOrderDocument(object):
                     raise cherrypy.HTTPError(400, "Invalid status")
 
                 document.status = body["status"]
+
+            if "is_approved" in body:
+                document.is_approved = Convert().str2int(body["is_approved"])
+
+                if document.is_approved:
+                    document.approved_by = token.user_id
+                    document.approved_at = datetime.utcnow()
 
             document.updated_at = datetime.utcnow()
             document.update(conn=conn)
