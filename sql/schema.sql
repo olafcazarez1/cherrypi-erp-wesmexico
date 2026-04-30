@@ -1493,6 +1493,77 @@ create table `sales_deliveries_orders_products_units` (
 	foreign key (`measure_id`) references `measures`(`measure_id`)
 ) engine=innodb default charset=utf8;
 
+CREATE TABLE `purchase_orders_documents` (
+	`purchase_order_id` CHAR(36) NOT NULL,
+	`company_id` CHAR(36) NOT NULL,
+	`branch_id` CHAR(36) NOT NULL,
+	`warehouse_id` CHAR(36) NOT NULL,
+	`supplier_id` CHAR(36) NOT NULL,
+	`user_id` CHAR(36) NOT NULL,
+	`employee_id` CHAR(36) NOT NULL,
+	`code` CHAR(32) DEFAULT '',
+	`reference` VARCHAR(120) NOT NULL DEFAULT '',
+	`priority` ENUM('low', 'medium', 'high', 'urgent') NOT NULL DEFAULT 'medium',
+	`currency` CHAR(4) NOT NULL DEFAULT 'mxn',
+	`exchange_rate` DOUBLE NOT NULL DEFAULT 1.00,
+	`amount` DOUBLE NOT NULL DEFAULT 0.00,
+	`discount` DOUBLE NOT NULL DEFAULT 0.00,
+	`subtotal` DOUBLE NOT NULL DEFAULT 0.00,
+	`taxes` DOUBLE NOT NULL DEFAULT 0.00,
+	`total` DOUBLE NOT NULL DEFAULT 0.00,
+	`transaction_date` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
+	`notes` VARCHAR(2048) NOT NULL DEFAULT '',
+	`status` ENUM('new', 'approved', 'sent', 'cancelled') NOT NULL DEFAULT 'new',
+	`created_at` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
+	`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`purchase_order_id`),
+	UNIQUE KEY (`code`),
+	KEY `supplier_id` (`supplier_id`),
+	KEY `employee_id` (`employee_id`),
+	FOREIGN KEY (`company_id`) REFERENCES `companies`(`company_id`),
+	FOREIGN KEY (`branch_id`, `warehouse_id`) REFERENCES `branch_offices_warehouses`(`branch_id`, `warehouse_id`),
+	FOREIGN KEY (`supplier_id`) REFERENCES `suppliers`(`supplier_id`),
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`),
+	FOREIGN KEY (`employee_id`) REFERENCES `employees`(`employee_id`)
+) ENGINE=INNODB DEFAULT CHARSET=UTF8;
+
+CREATE TABLE `purchase_orders_documents_products_taxes` (
+	`purchase_order_id` CHAR(36) NOT NULL,
+	`product_id` CHAR(36) NOT NULL,
+	`tax_id` CHAR(36) NOT NULL,
+	`percent` DOUBLE NOT NULL DEFAULT 0,
+	`created_at` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
+	`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`purchase_order_id`, `product_id`, `tax_id`),
+	KEY `product_id` (`product_id`),
+	KEY `tax_id` (`tax_id`),
+	FOREIGN KEY (`purchase_order_id`) REFERENCES `purchase_orders_documents` (`purchase_order_id`) ON DELETE CASCADE,
+	FOREIGN KEY (`product_id`, `tax_id`) REFERENCES `products_taxes` (`product_id`, `tax_id`)
+) ENGINE=INNODB DEFAULT CHARSET=UTF8;
+
+CREATE TABLE `purchase_orders_documents_details` (
+	`purchase_order_id` CHAR(36) NOT NULL,
+	`product_id` CHAR(36) NOT NULL,
+	`measure_id` CHAR(36) NOT NULL,
+	`currency` CHAR(4) NOT NULL DEFAULT 'mxn',
+	`quantity` DOUBLE NOT NULL DEFAULT 0.00,
+	`original_price` DOUBLE NOT NULL DEFAULT 0.00,
+	`discount_factor` DOUBLE NOT NULL DEFAULT 0.00,
+	`price` DOUBLE NOT NULL DEFAULT 0.00,
+	`amount` DOUBLE NOT NULL DEFAULT 0.00,
+	`subtotal` DOUBLE NOT NULL DEFAULT 0.00,
+	`discount` DOUBLE NOT NULL DEFAULT 0.00,
+	`taxes` DOUBLE NOT NULL DEFAULT 0.00,
+	`total` DOUBLE NOT NULL DEFAULT 0.00,
+	`created_at` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
+	`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`purchase_order_id`, `product_id`, `measure_id`),
+	KEY `product_id` (`product_id`),
+	KEY `measure_id` (`measure_id`),
+	FOREIGN KEY (`purchase_order_id`) REFERENCES `purchase_orders_documents` (`purchase_order_id`) ON DELETE CASCADE,
+	FOREIGN KEY (`product_id`, `measure_id`) REFERENCES `products_measures` (`product_id`, `measure_id`)
+) ENGINE=INNODB DEFAULT CHARSET=UTF8;
+
 
 CREATE VIEW `v_branch_offices_warehouses` AS 
 SELECT

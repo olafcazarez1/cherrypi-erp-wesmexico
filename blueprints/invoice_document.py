@@ -551,7 +551,6 @@ class MapInvoiceDocument(object):
             invoice.payment_type_id = document.payment_type
             invoice.receipt_type_id = document.fiscal_use
             invoice.status = "pending"
-            print(invoice.as_dict())
             invoice.insert(conn=conn)
 
             products = SaleDocumentProduct().where({"document_id": document_id}).all(conn=conn, collection=False)

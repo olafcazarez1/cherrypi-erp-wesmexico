@@ -28,6 +28,7 @@ from blueprints.quote_document import MapQuoteDocument
 from blueprints.sale_document import MapSaleDocument
 from blueprints.delivery_orders import MapDeliveryOrders
 from blueprints.invoice_document import MapInvoiceDocument
+from blueprints.purchase_order_document import MapPurchaseOrderDocument
 from blueprints.helpers import MapHelpers
 
 from blueprints.divitions import MapDivisions
@@ -120,6 +121,7 @@ def main():
     m_sales = MapSaleDocument()
     m_orders = MapDeliveryOrders()
     m_invoices = MapInvoiceDocument()
+    m_purchase_orders = MapPurchaseOrderDocument()
     m_helpers = MapHelpers()
 
     m_divisions = MapDivisions()
@@ -151,6 +153,7 @@ def main():
     m_sales.init(mapping)
     m_orders.init(mapping)
     m_invoices.init(mapping)
+    m_purchase_orders.init(mapping)
     m_helpers.init(mapping)
 
     m_divisions.init(mapping)

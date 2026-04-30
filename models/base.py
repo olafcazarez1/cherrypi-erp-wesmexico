@@ -10,6 +10,24 @@ from utils.singleton_meta import MetaConfig
 from utils.exceptions import CustomHTTPException
 
 
+class ModelField(property):
+    def __init__(self, default=None):
+        self.default = default
+        self.private = None
+        super().__init__(self.getter, self.setter)
+
+    def __set_name__(self, owner, name):
+        self.private = f"_{owner.__name__}__{name}"
+
+    def getter(self, instance):
+        if instance is None:
+            return self
+        return getattr(instance, self.private, self.default)
+
+    def setter(self, instance, value):
+        setattr(instance, self.private, value)
+
+
 class Model(Query):
     """Columns alias"""
 
@@ -19,6 +37,10 @@ class Model(Query):
     def __init__(self):
         """Constructor"""
         super().__init__(self)
+
+    @staticmethod
+    def field(name=None, default=None):
+        return ModelField(default)
 
     def get_connection(self, conn: str = "database", uses_pool: bool = False) -> DBConnector:
         """Get database connection from the Database Pool
@@ -42,7 +64,7 @@ class Model(Query):
                 uses_pool=uses_pool,
                 debug=Convert().str2bool(debug),
                 ignore_log_actions=Convert().str2bool(ignore_log_actions),
-                **meta.get_config(conn)
+                **meta.get_config(conn),
             )
         except TypeError as e:
             msg = "Impossible to connec to to database, review your configurations: {}"
