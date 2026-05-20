@@ -1,7 +1,7 @@
 /*!999999\- enable the sandbox mode */ 
 -- MariaDB dump 10.19  Distrib 10.6.18-MariaDB, for debian-linux-gnu (x86_64)
 --
--- Host: localhost    Database: wesmexico
+-- Host: localhost    Database: cafe88
 -- ------------------------------------------------------
 -- Server version	10.6.18-MariaDB-0ubuntu0.22.04.1
 
@@ -23,16 +23,16 @@
 -- DROP TABLE IF EXISTS `localities`;
 -- /*!40101 SET @saved_cs_client     = @@character_set_client */;
 -- /*!40101 SET character_set_client = utf8 */;
--- CREATE TABLE `localities` (
---   `state_id` char(36) NOT NULL DEFAULT '',
---   `municipality_id` char(36) NOT NULL DEFAULT '',
---   `locality_id` char(36) NOT NULL DEFAULT '',
---   `name` char(128) NOT NULL DEFAULT '',
---   `last_update` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
---   PRIMARY KEY (`state_id`,`municipality_id`,`locality_id`),
---   UNIQUE KEY `state_id` (`state_id`,`municipality_id`,`locality_id`,`name`),
---   CONSTRAINT `localities_ibfk_1` FOREIGN KEY (`state_id`, `municipality_id`) REFERENCES `municipalities` (`state_id`, `municipality_id`)
--- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+CREATE TABLE `localities` (
+  `state_id` char(36) NOT NULL DEFAULT '',
+  `municipality_id` char(36) NOT NULL DEFAULT '',
+  `locality_id` char(36) NOT NULL DEFAULT '',
+  `name` char(128) NOT NULL DEFAULT '',
+  `last_update` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`state_id`,`municipality_id`,`locality_id`),
+  UNIQUE KEY `state_id` (`state_id`,`municipality_id`,`locality_id`,`name`),
+  CONSTRAINT `localities_ibfk_1` FOREIGN KEY (`state_id`, `municipality_id`) REFERENCES `municipalities` (`state_id`, `municipality_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 -- /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

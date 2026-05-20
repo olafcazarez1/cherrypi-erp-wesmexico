@@ -44,13 +44,13 @@ def json_handler(*args, **kwargs):
 def main():
 
     parser = argparse.ArgumentParser(
-        description="ERP - Service API WesMexico", usage="%(prog)s [-h] [--config-file FILE]"
+        description="ERP - Service API Cafe88", usage="%(prog)s [-h] [--config-file FILE]"
     )
 
     parser.add_argument(
         "--config-file",
         type=str,
-        default="/etc/wesmexico/conf/default.conf",
+        default="/etc/cafe88/conf/default.conf",
         help="Initial Access Values",
     )
 

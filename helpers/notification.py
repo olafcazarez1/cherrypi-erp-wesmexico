@@ -33,8 +33,8 @@ class Notification(object):
 
         to.append(data["email"])
 
-        bcc.append("olaf.cazarez@wesmexico.com")
-        bcc.append("juancarlos.valenzuela@wesmexico.com")
+        bcc.append("olaf.cazarez@cafe88.com")
+        bcc.append("juancarlos.valenzuela@cafe88.com")
 
         content = content
 
@@ -48,7 +48,7 @@ class Notification(object):
 
         """ Create a text/plain message """
         msg = MIMEMultipart()
-        msg["Subject"] = Header("WesMexico - Bienvenido".encode("utf-8"), "utf-8")
+        msg["Subject"] = Header("Cafe88 - Bienvenido".encode("utf-8"), "utf-8")
 
         msg["From"] = self.__settings["user"]
 
@@ -87,8 +87,8 @@ class Notification(object):
 
         to.append(data["email"])
 
-        bcc.append("olaf.cazarez@wesmexico.com")
-        bcc.append("juancarlos.valenzuela@wesmexico.com")
+        bcc.append("olaf.cazarez@cafe88.com")
+        bcc.append("juancarlos.valenzuela@cafe88.com")
 
         content = content
 
@@ -102,7 +102,7 @@ class Notification(object):
 
         """ Create a text/plain message """
         msg = MIMEMultipart()
-        msg["Subject"] = Header("WesMexico - Recupera tu contraseña ".encode("utf-8"), "utf-8")
+        msg["Subject"] = Header("Cafe88 - Recupera tu contraseña ".encode("utf-8"), "utf-8")
 
         msg["From"] = self.__settings["user"]
 
@@ -137,8 +137,8 @@ class Notification(object):
         to = data.get("to", [document["client"]["email"]])
         cc = []
         to = [
-            "olaf.cazarez@wesmexico.com",
-            "juancarlos.valenzuela@wesmexico.com",
+            "olaf.cazarez@cafe88.com",
+            "juancarlos.valenzuela@cafe88.com",
             # document["client"]["email"]
         ]
         cc = []
@@ -158,7 +158,7 @@ class Notification(object):
         content = content.replace("#total#", "{:.2f}".format(document["total"]))
 
         """ Create a text/plain message """
-        subject = "WesMexico - Factura {} ".format(document["code"])
+        subject = "Cafe88 - Factura {} ".format(document["code"])
 
         msg = MIMEMultipart()
         msg["Subject"] = Header(subject.encode("utf-8"), "utf-8")
@@ -201,8 +201,8 @@ class Notification(object):
         to = data.get("to", [document["client"]["email"]])
         cc = []
         bcc = [
-            "olaf.cazarez@wesmexico.com",
-            "juancarlos.valenzuela@wesmexico.com",
+            "olaf.cazarez@cafe88.com",
+            "juancarlos.valenzuela@cafe88.com",
         ]
 
         if "cc" in data:

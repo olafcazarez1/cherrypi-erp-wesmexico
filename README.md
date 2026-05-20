@@ -1,3 +1,3 @@
-# service-api-wesmexico
+# service-api-cafe88
 
-Service API for wesmexico ERP
+Service API for cafe88 ERP

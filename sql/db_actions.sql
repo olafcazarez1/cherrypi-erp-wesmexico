@@ -1,9 +1,9 @@
-CREATE DATABASE `wesmexico` CHARACTER SET utf8 COLLATE utf8_general_ci;
+CREATE DATABASE `cafe88` CHARACTER SET utf8 COLLATE utf8_general_ci;
 
-CREATE USER 'wesmexico_rw'@'localhost' IDENTIFIED BY '$WesMexico123.';
-GRANT ALL PRIVILEGES ON `wesmexico`.* TO 'wesmexico_rw'@'localhost';
+CREATE USER 'cafe88_rw'@'localhost' IDENTIFIED BY '$Cafe88.';
+GRANT ALL PRIVILEGES ON `cafe88`.* TO 'cafe88_rw'@'localhost';
 
-USE `wesmexico`;
+USE `cafe88`;
 
 FLUSH PRIVILEGES;
 

@@ -1632,13 +1632,15 @@ INSERT INTO `categories` VALUES
 ('67b3744f-12b4-4d93-b6c9-0544152ad007','0001','Generica','work-position',0,'active','2024-09-06 17:31:50','2024-09-06 17:31:50'),
 ('b0311ae9-e710-47ca-a91a-16e36006c32e','0001','Generica','work-area',0,'active','2024-09-06 17:31:58','2024-09-06 17:31:58'),
 ('ed77e6e8-2c99-43e4-b4a4-a945e9afd444','0001','Conocido','department',0,'active','2024-09-06 17:36:16','2024-09-06 17:36:16'),
-('ff828219-7cd1-44b1-b90c-6a98567b2f4c', '0001', 'Generico', 'clients', 0, 'active', '2024-09-10 16:16:04', '2024-09-10 16:16:04'); 
+('ff828219-7cd1-44b1-b90c-6a98567b2f4c', '0001', 'Generico', 'clients', 0, 'active', '2024-09-10 16:16:04', '2024-09-10 16:16:04'),
+('ea07e6bb-6ef6-4562-898d-bdc5f2b1ad16', '0001', 'Generico', 'suppliers', 0, 'active', '2024-09-10 16:16:04', '2024-09-10 16:16:04'); 
 
 
 INSERT INTO `series` VALUES
 ('2fe285f2-91d1-4729-8858-ca6b8562a697','general','category_of_department','',1,'','2024-09-06 17:36:16','2024-09-06 17:36:16'),
 ('3f412848-3675-479a-994d-62d95bb67d7a','general','category_of_work-position','',1,'','2024-09-06 17:31:50','2024-09-06 17:31:50'),
 ('d129a570-522e-4046-9da2-21d6c069d82d','general','category_of_work-area','',1,'','2024-09-06 17:31:58','2024-09-06 17:31:58'),
+('28bc5b6e-5473-11f1-8dc0-d413e1314ff8', 'general', 'category_of_suppliers', '', 1, '', '2024-09-10 16:16:04', '2024-09-10 16:16:04'),
 ('c9697e0a-2d8b-4a94-abc7-6366cc59b80e', 'general', 'category_of_clients', '', 1, '', '2024-09-10 16:16:04', '2024-09-10 16:16:04');
 
-INSERT INTO `suppliers` SET `supplier_id` = "f4538ac1-a9c5-11ed-9f14-809133bea1e5", `category_id` = "ea07e6bb-6ef6-4562-898d-bdc5f2b1ad16", `code` = "0000", `legal_name` = "Sistema", `trade_name` = "Sistema", `address_street` = "Conocido", `address_external_number` = "SN", `address_internal_number` = "", `neighborhood` = "Conocido", `state_id` = "03", `municipality_id` = "003", `locality_id` = "0001", `zip` = "0", `taxpayer_id` = "ND", `tax_regime_id` = "", `email` = "noreply@wesmexico.com", `phone` = "0000000000", `cell_phone` = "6121416994", `references` = "", `created_at` = "2022-03-22 04:20:16", `updated_at` = "2022-03-23 18:06:28", `status` = "inactive";
+INSERT INTO `suppliers` SET `supplier_id` = "f4538ac1-a9c5-11ed-9f14-809133bea1e5", `category_id` = "ea07e6bb-6ef6-4562-898d-bdc5f2b1ad16", `code` = "0000", `legal_name` = "Sistema", `trade_name` = "Sistema", `address_street` = "Conocido", `address_external_number` = "SN", `address_internal_number` = "", `neighborhood` = "Conocido", `state_id` = "03", `municipality_id` = "003", `locality_id` = "0001", `zip` = "0", `taxpayer_id` = "ND", `tax_regime_id` = "", `email` = "noreply@cafe88.com", `phone` = "0000000000", `cell_phone` = "6121416994", `references` = "", `created_at` = "2022-03-22 04:20:16", `updated_at` = "2022-03-23 18:06:28", `status` = "inactive";
