@@ -910,6 +910,135 @@ CREATE TABLE `quotes_documents_details` (
 	FOREIGN KEY (`product_id`, `measure_id`) REFERENCES `products_measures` (`product_id`, `measure_id`)
 ) ENGINE=INNODB DEFAULT CHARSET=UTF8;
 
+CREATE TABLE `shopping_carts` (
+    `cart_id` CHAR(36) NOT NULL DEFAULT '',
+    `cart_token` CHAR(36) NOT NULL DEFAULT '',
+
+    `branch_id` CHAR(36) NOT NULL DEFAULT '',
+    `warehouse_id` CHAR(36) NOT NULL DEFAULT '',
+
+    -- `register_id` CHAR(36) NOT NULL DEFAULT '',
+    `client_id` CHAR(36) NOT NULL DEFAULT '',
+    `user_id` CHAR(36) NOT NULL DEFAULT '',
+
+    `currency` CHAR(4) NOT NULL DEFAULT 'mxn',
+    `exchange_rate` DECIMAL(14, 6) NOT NULL DEFAULT 1,
+
+    `status` ENUM(
+        'active',
+        'converted',
+        'abandoned',
+        'cancelled'
+    ) NOT NULL DEFAULT 'active',
+
+    `expires_at` TIMESTAMP NULL,
+
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`cart_id`),
+
+    UNIQUE KEY `uk_shopping_carts_token` (`cart_token`),
+
+    KEY `idx_shopping_carts_user_status`
+        (`user_id`, `status`),
+
+    KEY `idx_shopping_carts_client_status`
+        (`client_id`, `status`),
+
+    KEY `idx_shopping_carts_status_expires`
+        (`status`, `expires_at`),
+
+    CONSTRAINT `fk_shopping_carts_branch_warehouse`
+        FOREIGN KEY (`branch_id`, `warehouse_id`)
+        REFERENCES `branch_offices_warehouses`
+        (`branch_id`, `warehouse_id`),
+
+    -- CONSTRAINT `fk_shopping_carts_register`
+    --     FOREIGN KEY (`register_id`)
+    --     REFERENCES `cash_registers` (`register_id`),
+
+    CONSTRAINT `fk_shopping_carts_client`
+        FOREIGN KEY (`client_id`)
+        REFERENCES `clients` (`client_id`)
+
+    -- CONSTRAINT `fk_shopping_carts_user`
+    --     FOREIGN KEY (`user_id`)
+    --     REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+CREATE TABLE `shopping_cart_items` (
+    `cart_item_id` CHAR(36) NOT NULL,
+    `cart_id` CHAR(36) NOT NULL,
+
+    `product_id` CHAR(36) NOT NULL,
+    `measure_id` CHAR(36) NOT NULL,
+
+    `equivalence` DECIMAL(14, 4) NOT NULL DEFAULT 1,
+    `quantity` DECIMAL(14, 4) NOT NULL DEFAULT 1,
+
+    `currency` CHAR(4) NOT NULL DEFAULT 'mxn',
+
+    `original_price` DECIMAL(14, 2) NOT NULL DEFAULT 0,
+    `unit_price` DECIMAL(14, 2) NOT NULL DEFAULT 0,
+    `discount_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0,
+
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`cart_item_id`),
+
+    UNIQUE KEY `uk_shopping_cart_item_product_measure`
+        (`cart_id`, `product_id`, `measure_id`),
+
+    KEY `idx_shopping_cart_items_cart`
+        (`cart_id`),
+
+    KEY `idx_shopping_cart_items_product_measure`
+        (`product_id`, `measure_id`),
+
+    CONSTRAINT `fk_shopping_cart_items_cart`
+        FOREIGN KEY (`cart_id`)
+        REFERENCES `shopping_carts` (`cart_id`)
+        ON DELETE CASCADE,
+
+    CONSTRAINT `fk_shopping_cart_items_product_measure`
+        FOREIGN KEY (`product_id`, `measure_id`)
+        REFERENCES `products_measures`
+        (`product_id`, `measure_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+CREATE TABLE `shopping_cart_item_taxes` (
+    `cart_item_id` CHAR(36) NOT NULL,
+    `tax_id` CHAR(36) NOT NULL,
+
+    `percent` DECIMAL(8, 4) NOT NULL DEFAULT 0,
+    `tax_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0,
+
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`cart_item_id`, `tax_id`),
+
+    KEY `idx_shopping_cart_item_taxes_tax`
+        (`tax_id`),
+
+    CONSTRAINT `fk_shopping_cart_item_taxes_item`
+        FOREIGN KEY (`cart_item_id`)
+        REFERENCES `shopping_cart_items` (`cart_item_id`)
+        ON DELETE CASCADE,
+
+    CONSTRAINT `fk_shopping_cart_item_taxes_tax`
+        FOREIGN KEY (`tax_id`)
+        REFERENCES `taxes` (`tax_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
 CREATE TABLE `sales_documents` (
 	`document_id` CHAR(36) NOT NULL,
 	`company_id` CHAR(36) NOT NULL,
@@ -1644,3 +1773,6 @@ INSERT INTO `series` VALUES
 ('c9697e0a-2d8b-4a94-abc7-6366cc59b80e', 'general', 'category_of_clients', '', 1, '', '2024-09-10 16:16:04', '2024-09-10 16:16:04');
 
 INSERT INTO `suppliers` SET `supplier_id` = "f4538ac1-a9c5-11ed-9f14-809133bea1e5", `category_id` = "ea07e6bb-6ef6-4562-898d-bdc5f2b1ad16", `code` = "0000", `legal_name` = "Sistema", `trade_name` = "Sistema", `address_street` = "Conocido", `address_external_number` = "SN", `address_internal_number` = "", `neighborhood` = "Conocido", `state_id` = "03", `municipality_id` = "003", `locality_id` = "0001", `zip` = "0", `taxpayer_id` = "ND", `tax_regime_id` = "", `email` = "noreply@cafe88.com", `phone` = "0000000000", `cell_phone` = "6121416994", `references` = "", `created_at` = "2022-03-22 04:20:16", `updated_at` = "2022-03-23 18:06:28", `status` = "inactive";
+
+INSERT INTO clients (     client_id,      category_id,      code,      legal_name,      trade_name,      address_street,      address_external_number,      address_internal_number,
+  neighborhood,      state_id,      municipality_id,      locality_id,      zip,      taxpayer_id,      tax_regime_id,      email,      phone,      cell_phone,      `references`,      created_at,      updated_at,      status ) VALUES (     'fcf4d65d-7d57-444f-8e44-c44f5defebd2',      'ff828219-7cd1-44b1-b90c-6a98567b2f4c',      '0001',      'VENTA AL PUBLICO EN GENERAL',      'MOSTRADOR',      'CONOCIDA',      '0',      '',      'CONOCIDA',      '00',      '000',      '0000',      '0',      'XAXX010101000',      'a77bda1b-f4fe-43e8-96e3-a1544a9dd029',      'undefined@gmail.com',      '0000000000',      '0000000000',      '',      '2026-01-22 12:55:09',      '2026-01-22 14:32:38',      'active' );
