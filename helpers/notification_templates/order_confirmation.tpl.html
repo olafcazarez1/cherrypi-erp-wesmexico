@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Pedido confirmado</title>
+</head>
+
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f5f1eb;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #2b0a00;
+">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f1eb;">
+        <tr>
+            <td align="center" style="padding: 32px 16px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="
+                        max-width: 680px;
+                        background-color: #ffffff;
+                        border-radius: 20px;
+                        overflow: hidden;
+                    ">
+                    <tr>
+                        <td align="center" style="
+                                padding: 32px 32px 20px;
+                                background-color: #3a1208;
+                                color: #ffffff;
+                            ">
+                            <div style="
+                                font-size: 28px;
+                                font-weight: bold;
+                            ">
+                                Café88
+                            </div>
+
+                            <div style="
+                                margin-top: 8px;
+                                font-size: 13px;
+                                letter-spacing: 2px;
+                                text-transform: uppercase;
+                            ">
+                                Pedido confirmado
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 32px;">
+                            <h1 style="
+                                margin: 0 0 16px;
+                                text-align: center;
+                                font-size: 30px;
+                            ">
+                                ¡Gracias por apoyar a Café88!
+                            </h1>
+
+                            <p style="
+                                margin: 0 0 28px;
+                                text-align: center;
+                                color: #66554c;
+                                line-height: 1.6;
+                            ">
+                                Hola #client_name#, recibimos
+                                correctamente tu pedido y pronto
+                                comenzaremos a prepararlo.
+                            </p>
+
+                            <div style="
+                                margin-bottom: 28px;
+                                padding: 20px;
+                                border: 1px solid #eadfd3;
+                                border-radius: 14px;
+                                background-color: #faf8f6;
+                                text-align: center;
+                            ">
+                                <div style="
+                                    color: #76665d;
+                                    font-size: 12px;
+                                    text-transform: uppercase;
+                                    letter-spacing: 1px;
+                                ">
+                                    Número de pedido
+                                </div>
+
+                                <div style="
+                                    margin-top: 8px;
+                                    color: #8d0000;
+                                    font-size: 22px;
+                                    font-weight: bold;
+                                ">
+                                    #document_code#
+                                </div>
+                            </div>
+
+                            <h2 style="
+                                margin: 0 0 12px;
+                                font-size: 20px;
+                            ">
+                                Productos
+                            </h2>
+
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="
+                                    border-collapse: collapse;
+                                    margin-bottom: 28px;
+                                ">
+                                <thead>
+                                    <tr style="
+                                        background-color: #f5f1eb;
+                                    ">
+                                        <th align="left" style="padding: 10px 8px;">
+                                            Producto
+                                        </th>
+
+                                        <th align="center" style="padding: 10px 8px;">
+                                            Cantidad
+                                        </th>
+
+                                        <th align="right" style="padding: 10px 8px;">
+                                            Precio
+                                        </th>
+
+                                        <th align="right" style="padding: 10px 8px;">
+                                            Total
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    #products#
+                                </tbody>
+                            </table>
+
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="
+                                    margin-bottom: 28px;
+                                    background-color: #faf8f6;
+                                    border-radius: 14px;
+                                ">
+                                <tr>
+                                    <td style="padding: 16px 20px;">
+                                        Subtotal
+                                    </td>
+
+                                    <td align="right" style="padding: 16px 20px;">
+                                        $#subtotal#
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td style="padding: 0 20px 16px;">
+                                        IVA incluido
+                                    </td>
+
+                                    <td align="right" style="padding: 0 20px 16px;">
+                                        $#taxes#
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td style="
+                                        padding: 16px 20px;
+                                        border-top: 1px solid #eadfd3;
+                                        font-size: 18px;
+                                        font-weight: bold;
+                                    ">
+                                        Total pagado
+                                    </td>
+
+                                    <td align="right" style="
+                                            padding: 16px 20px;
+                                            border-top: 1px solid #eadfd3;
+                                            color: #16763a;
+                                            font-size: 20px;
+                                            font-weight: bold;
+                                        ">
+                                        $#total# #currency#
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <h2 style="
+                                margin: 0 0 12px;
+                                font-size: 20px;
+                            ">
+                                Dirección de entrega
+                            </h2>
+
+                            <div style="
+                                margin-bottom: 28px;
+                                padding: 18px 20px;
+                                border-radius: 14px;
+                                background-color: #faf8f6;
+                                color: #4b3b33;
+                                line-height: 1.7;
+                            ">
+                                #delivery_address#
+                            </div>
+
+                            <h2 style="
+                                margin: 0 0 12px;
+                                font-size: 20px;
+                            ">
+                                Pago
+                            </h2>
+
+                            <div style="
+                                padding: 18px 20px;
+                                border-radius: 14px;
+                                background-color: #faf8f6;
+                                line-height: 1.7;
+                            ">
+                                <strong>Método:</strong>
+                                #payment_method#
+                                <br>
+
+                                <strong>Referencia:</strong>
+                                #payment_reference#
+                            </div>
+
+                            <p style="
+                                margin: 30px 0 0;
+                                text-align: center;
+                                color: #76665d;
+                                line-height: 1.6;
+                            ">
+                                Te notificaremos nuevamente cuando
+                                tu pedido sea enviado.
+                                <br>
+                                Gracias por elegir Café88.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="center" style="
+                                padding: 20px 32px;
+                                background-color: #3a1208;
+                                color: #ffffff;
+                                font-size: 12px;
+                            ">
+                            Café88 · cafe88.mx
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

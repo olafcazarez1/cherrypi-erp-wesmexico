@@ -36,6 +36,10 @@ class DocumentPayment(Model):
         "balance",
         "currency",
         "exchange_rate",
+        "provider",
+        "provider_order_id",
+        "provider_transaction_id",
+        "provider_status",
         "is_signed",
         "status",
     ]
@@ -525,6 +529,15 @@ class DocumentPayment(Model):
             >>> self.exchange_rate = exchange_rate
         """
         self.__exchange_rate = exchange_rate
+
+    provider = Model.field("provider", "")
+    provider_order_id = Model.field("provider_order_id", "")
+    provider_transaction_id = Model.field(
+        "provider_transaction_id",
+        "",
+    )
+    provider_status = Model.field("provider_status", "")
+    provider_data = Model.field("provider_data")
 
     @property
     def transaction_date(self):

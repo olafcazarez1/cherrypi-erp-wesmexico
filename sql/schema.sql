@@ -1,3 +1,24 @@
+create table `postal_codes` (
+    `state_id` char(36) NOT NULL DEFAULT '',
+    `municipality_id` char(36) NOT NULL DEFAULT '',
+    `locality_id` char(36) NOT NULL DEFAULT '',
+    `zip` char(10) DEFAULT '',
+    `border_zone` tinyint(1) unsigned NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP NOT NULL DEFAULT '1990-01-01 00:00:00',
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`zip`)
+    -- FOREIGN KEY ( `state_id`, `municipality_id`, `locality_id`) REFERENCES `localities`( `state_id`, `municipality_id`, `locality_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+create table `neighborhoods` (
+    `neighborhood_id` char(10) NOT NULL DEFAULT '',
+    `zip` char(10) NOT NULL DEFAULT '',
+    `name` char(255) NOT NULL DEFAULT '',
+    `created_at` TIMESTAMP NOT NULL DEFAULT '1990-01-01 00:00:00',
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`zip`, `neighborhood_id`, `name`),
+    index(`zip`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `assets` (
 	`asset_id` CHAR(36) NOT NULL DEFAULT '',
@@ -1055,13 +1076,11 @@ CREATE TABLE `sales_documents` (
 	`discount` DOUBLE NOT NULL DEFAULT 0.00,
 	`taxes` DOUBLE NOT NULL DEFAULT 0.00,
 	`total` DOUBLE NOT NULL DEFAULT 0.00,
-	`requires_invoice` TINYINT(1) NOT NULL DEFAULT 0,
+	`payment_method` CHAR(36) NOT NULL DEFAULT '99',
+	`payment_type` CHAR(36) NOT NULL DEFAULT 'PUE',
+	`fiscal_use` CHAR(36) NOT NULL DEFAULT 'G03',
 	`payment_status` ENUM('pending','paid') NOT NULL DEFAULT 'pending',
-	`payment_type_id` CHAR(36) NOT NULL DEFAULT 'PUE',
-	`payment_method_id` CHAR(36) NOT NULL DEFAULT '99',
-	`fiscal_use_id` CHAR(36) NOT NULL DEFAULT 'G03',
 	`transaction_method` ENUM('cash', 'debit_card', 'credit_card', 'mixed') DEFAULT 'cash',
-	`transaction_type` ENUM('full_payment', 'payment_in_installments') DEFAULT 'full_payment',
 	`transaction_date` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
 	`transaction_status` ENUM('pending', 'paid') DEFAULT 'pending',
 	`is_signed` tinyint(1) NOT NULL DEFAULT 0,
@@ -1146,6 +1165,11 @@ create table `sales_documents_payments` (
 	`balance` double not null default 0.00,
 	`currency` char(4) not null default 'mxn',
 	`exchange_rate` double not null default 1.00,
+	`provider` VARCHAR(32) NOT NULL DEFAULT '',
+	`provider_order_id` VARCHAR(128) NOT NULL DEFAULT '',
+	`provider_transaction_id` VARCHAR(128) NOT NULL DEFAULT '',
+	`provider_status` VARCHAR(32) NOT NULL DEFAULT '',
+	`provider_data` JSON NULL,
 	`transaction_date` timestamp not null default '2000-01-01 00:00:00',
 	`is_signed` tinyint(1) NOT NULL DEFAULT 0,
 	`status` enum('active', 'inactive') not null default 'active',
@@ -1153,11 +1177,35 @@ create table `sales_documents_payments` (
 	`updated_at` timestamp not null default current_timestamp on update current_timestamp ,
 	UNIQUE KEY ( `code` ),
 	UNIQUE KEY ( `document_id`, `serie` ),
+	UNIQUE KEY (`provider`, `provider_transaction_id`),
 	KEY (`document_id`, `payment_id`),
+	KEY (`provider`, `provider_order_id`),
 	FOREIGN KEY (`document_id`) REFERENCES `sales_documents` (`document_id`),
 	FOREIGN KEY (`branch_id`) REFERENCES `branch_offices`(`branch_id`),
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`)
 ) engine=innodb default CHARSET=utf8;
+
+create table `sales_documents_delivery_addresses`(
+	`document_id` char(36) primary key,
+	`name` char(120) not null default '',
+	`email` VARCHAR(254) NOT NULL DEFAULT '',
+	`address_street` char(60) not null default '',
+	`address_external_number` char(10) not null default '',
+	`address_internal_number` char(10) not null default '',
+	`neighborhood` char(60) default '',
+	`state_id` char(36) NULL,
+	`municipality_id` char(36) NULL,
+	`locality_id` char(36) not null NULL,
+	`zip` char(5) not null default '',
+	`phone` char(10) not null default '',
+	`references` VARCHAR(512) not null default '',
+	`created_at` timestamp not null default '2000-01-01 00:00:00',
+	`updated_at` timestamp not null default current_timestamp on update current_timestamp ,
+	`status` enum('active', 'inactive') not null default 'active',
+	index (`phone`),
+	FOREIGN KEY (`document_id`) REFERENCES `sales_documents` (`document_id`) ON DELETE CASCADE
+) engine=innodb default CHARSET=utf8;
+
 
 
 CREATE TABLE `invoiced_documents` (

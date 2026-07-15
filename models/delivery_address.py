@@ -23,6 +23,7 @@ class DeliveryAddress(Model):
     _REQUIRED = [
         "document_id",
         "name",
+        "email",
         "address_street",
         "address_external_number",
         "address_internal_number",
@@ -118,6 +119,37 @@ class DeliveryAddress(Model):
                 >>> self.name = name
         """
         self.__name = name
+
+    @property
+    def email(self):
+        """Getter email
+
+        Args:
+
+        Returns:
+                string: email value
+
+        Usage:
+                >>> email = self.email
+        """
+        try:
+            return self.__email
+        except AttributeError:
+            return None
+
+    @email.setter
+    def email(self, email):
+        """Setter email
+
+        Args:
+                email(string): email.
+
+        Returns:
+
+        Usage:
+                >>> self.email = email
+        """
+        self.__email = email
 
     @property
     def address_street(self):
