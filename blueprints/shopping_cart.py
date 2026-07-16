@@ -17,12 +17,12 @@ from models.branch_office_warehouse import BranchOfficeWarehouse
 from models.shopping_cart import ShoppingCart
 from models.shopping_cart_item import ShoppingCartItem
 from models.shopping_cart_item_tax import ShoppingCartItemTax
+from models.shopping_cart_checkout_intent import ShoppingCartCheckoutIntent
 
 from models.state import State
 from models.municipality import Municipality
 from models.measure import Measure
 
-from models.warehouse import Warehouse
 from models.client import Client
 from models.product import Product
 from models.product_tax import ProductTax
@@ -124,6 +124,30 @@ class MapShoppingCart(object):
             controller=self,
             action="checkout_shopping_cart",
             conditions=dict(method=["POST", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "create_shopping_cart_checkout_intent",
+            "/shopping-cart/checkout-intent",
+            controller=self,
+            action="create_shopping_cart_checkout_intent",
+            conditions=dict(method=["POST", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "get_shopping_cart_checkout_intent",
+            "/shopping-cart/checkout-intent/{cart_id}",
+            controller=self,
+            action="get_shopping_cart_checkout_intent",
+            conditions=dict(method=["GET", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "update_shopping_cart_checkout_intent",
+            "/shopping-cart/checkout-intent/{cart_id}",
+            controller=self,
+            action="update_shopping_cart_checkout_intent",
+            conditions=dict(method=["PATCH", "OPTIONS"]),
         )
 
     # -------------------------------------------------------------------------
@@ -617,15 +641,50 @@ class MapShoppingCart(object):
     def checkout_shopping_cart(self, **kwargs):
 
         token = kwargs.get("token")
-        cart_token = self.__get_cart_token()
-
+        conn = ShoppingCart().get_connection()
         body = cherrypy.request.json
+
+        requested_cart_id = str(
+            body.get(
+                "cart_id",
+                "",
+            )
+        ).strip()
+
+        if requested_cart_id:
+            cart = (
+                ShoppingCart()
+                .where(
+                    {
+                        "cart_id": requested_cart_id,
+                    },
+                    {
+                        "status": "active",
+                    },
+                )
+                .one_or_none(
+                    conn=conn,
+                )
+            )
+
+        else:
+            cart_token = self.__get_cart_token()
+
+            cart = self.__get_active_cart(
+                cart_token=cart_token,
+                conn=conn,
+            )
+
+        if cart is None:
+            raise cherrypy.HTTPError(
+                404,
+                "Shopping cart not found",
+            )
 
         user_id = token.user_id
         payment_body = body.get("payment", {})
         address_body = body.get("delivery_address", {})
 
-        conn = ShoppingCart().get_connection()
         user_employee = (
             UserEmployee()
             .where(
@@ -738,18 +797,6 @@ class MapShoppingCart(object):
 
         try:
             conn.begin(conn)
-
-            cart = self.__get_active_cart(
-                cart_token=cart_token,
-                conn=conn,
-            )
-
-            if cart is None:
-                raise cherrypy.HTTPError(
-                    404,
-                    "Shopping cart not found",
-                )
-
             document_id = cart.cart_id
 
             # -------------------------------------
@@ -1849,3 +1896,467 @@ class MapShoppingCart(object):
             Decimal("0.01"),
             rounding=ROUND_HALF_UP,
         )
+
+    # -------------------------------------------------------------------------
+    # CHECKOUT INTENT
+    # -------------------------------------------------------------------------
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    @tools.validate_body_params(
+        [
+            "cart_id",
+            "provider",
+            "delivery_address",
+        ]
+    )
+    def create_shopping_cart_checkout_intent(self, **kwargs):
+        token = kwargs.get("token")
+        body = cherrypy.request.json
+
+        cart_id = str(
+            body.get(
+                "cart_id",
+                "",
+            )
+        ).strip()
+
+        provider = (
+            str(
+                body.get(
+                    "provider",
+                    "",
+                )
+            )
+            .strip()
+            .lower()
+        )
+
+        address = body.get(
+            "delivery_address",
+            {},
+        )
+
+        if provider not in [
+            "paypal",
+            "mercado_pago",
+        ]:
+            raise cherrypy.HTTPError(
+                400,
+                "Invalid payment provider",
+            )
+
+        required_address_fields = [
+            "name",
+            "email",
+            "phone",
+            "street",
+            "exteriorNumber",
+            "neighborhood",
+            "postalCode",
+            "city",
+            "state",
+        ]
+
+        for field in required_address_fields:
+            if not str(
+                address.get(
+                    field,
+                    "",
+                )
+            ).strip():
+                raise cherrypy.HTTPError(
+                    400,
+                    ("Missing delivery address field: " "{}").format(field),
+                )
+
+        phone = "".join(
+            character
+            for character in str(
+                address.get(
+                    "phone",
+                    "",
+                )
+            )
+            if character.isdigit()
+        )
+
+        if phone.startswith("52") and len(phone) == 12:
+            phone = phone[2:]
+
+        if len(phone) != 10:
+            raise cherrypy.HTTPError(
+                400,
+                "Phone must contain 10 digits",
+            )
+
+        postal_code = str(
+            address.get(
+                "postalCode",
+                "",
+            )
+        ).strip()
+
+        if len(postal_code) != 5 or not postal_code.isdigit():
+            raise cherrypy.HTTPError(
+                400,
+                "Invalid postal code",
+            )
+
+        conn = ShoppingCart().get_connection()
+
+        cart = (
+            ShoppingCart()
+            .where(
+                {
+                    "cart_id": cart_id,
+                },
+                {
+                    "status": "active",
+                },
+            )
+            .one_or_none(
+                conn=conn,
+            )
+        )
+
+        if cart is None:
+            raise cherrypy.HTTPError(
+                404,
+                "Shopping cart not found",
+            )
+
+        if cart.user_id != token.user_id:
+            raise cherrypy.HTTPError(
+                403,
+                "Shopping cart does not belong to the current user",
+            )
+
+        try:
+            conn.begin(conn)
+
+            now = datetime.utcnow()
+
+            intent = (
+                ShoppingCartCheckoutIntent()
+                .where(
+                    {
+                        "cart_id": cart_id,
+                    }
+                )
+                .one_or_none(
+                    conn=conn,
+                )
+            )
+
+            if intent is None:
+                intent = ShoppingCartCheckoutIntent()
+
+                intent.cart_id = cart_id
+                intent.created_at = now
+
+            intent.provider = provider
+
+            intent.name = str(
+                address.get(
+                    "name",
+                    "",
+                )
+            ).strip()
+
+            intent.email = str(
+                address.get(
+                    "email",
+                    "",
+                )
+            ).strip()
+
+            intent.phone = phone
+
+            intent.street = str(
+                address.get(
+                    "street",
+                    "",
+                )
+            ).strip()
+
+            intent.exterior_number = str(
+                address.get(
+                    "exteriorNumber",
+                    "",
+                )
+            ).strip()
+
+            intent.interior_number = str(
+                address.get(
+                    "interiorNumber",
+                    "",
+                )
+            ).strip()
+
+            intent.neighborhood = str(
+                address.get(
+                    "neighborhood",
+                    "",
+                )
+            ).strip()
+
+            intent.postal_code = postal_code
+
+            intent.city = str(
+                address.get(
+                    "city",
+                    "",
+                )
+            ).strip()
+
+            intent.state = str(
+                address.get(
+                    "state",
+                    "",
+                )
+            ).strip()
+
+            intent.reference = str(
+                address.get(
+                    "reference",
+                    "",
+                )
+            ).strip()
+
+            intent.status = "pending"
+            intent.updated_at = now
+
+            intent.update_or_insert(
+                conn=conn,
+            )
+
+            conn.commit(conn)
+
+        except cherrypy.HTTPError:
+            conn.rollback(conn)
+            raise
+
+        except Exception as error:
+            conn.rollback(conn)
+
+            raise cherrypy.HTTPError(
+                500,
+                ("Problem creating shopping cart " "checkout intent: {}").format(error),
+            )
+
+        cherrypy.response.status = 201
+
+        return self.__serialize_checkout_intent(intent)
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @tools.secured()
+    def get_shopping_cart_checkout_intent(self, cart_id=None, **kwargs):
+        token = kwargs.get("token")
+
+        cart_id = str(cart_id or "").strip()
+
+        if not cart_id:
+            raise cherrypy.HTTPError(
+                400,
+                "Shopping cart ID is required",
+            )
+
+        conn = ShoppingCart().get_connection()
+
+        cart = (
+            ShoppingCart()
+            .where(
+                {
+                    "cart_id": cart_id,
+                }
+            )
+            .one_or_none(
+                conn=conn,
+            )
+        )
+
+        if cart is None:
+            raise cherrypy.HTTPError(
+                404,
+                "Shopping cart not found",
+            )
+
+        if cart.user_id != token.user_id:
+            raise cherrypy.HTTPError(
+                403,
+                "Shopping cart does not belong to the current user",
+            )
+
+        intent = (
+            ShoppingCartCheckoutIntent()
+            .where(
+                {
+                    "cart_id": cart_id,
+                }
+            )
+            .one_or_none(
+                conn=conn,
+            )
+        )
+
+        if intent is None:
+            raise cherrypy.HTTPError(
+                404,
+                "Shopping cart checkout intent not found",
+            )
+
+        return self.__serialize_checkout_intent(intent)
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    def update_shopping_cart_checkout_intent(self, cart_id=None, **kwargs):
+        token = kwargs.get("token")
+        body = cherrypy.request.json
+
+        cart_id = str(cart_id or "").strip()
+
+        if not cart_id:
+            raise cherrypy.HTTPError(
+                400,
+                "Shopping cart ID is required",
+            )
+
+        allowed_statuses = [
+            "pending",
+            "processing",
+            "completed",
+            "failed",
+        ]
+
+        conn = ShoppingCart().get_connection()
+
+        cart = (
+            ShoppingCart()
+            .where(
+                {
+                    "cart_id": cart_id,
+                }
+            )
+            .one_or_none(
+                conn=conn,
+            )
+        )
+
+        if cart is None:
+            raise cherrypy.HTTPError(
+                404,
+                "Shopping cart not found",
+            )
+
+        if cart.user_id != token.user_id:
+            raise cherrypy.HTTPError(
+                403,
+                "Shopping cart does not belong to the current user",
+            )
+
+        intent = (
+            ShoppingCartCheckoutIntent()
+            .where(
+                {
+                    "cart_id": cart_id,
+                }
+            )
+            .one_or_none(
+                conn=conn,
+            )
+        )
+
+        if intent is None:
+            raise cherrypy.HTTPError(
+                404,
+                "Shopping cart checkout intent not found",
+            )
+
+        status = body.get(
+            "status",
+        )
+
+        if status is not None:
+            status = str(status).strip().lower()
+
+            if status not in allowed_statuses:
+                raise cherrypy.HTTPError(
+                    400,
+                    "Invalid checkout intent status",
+                )
+
+        try:
+            conn.begin(conn)
+
+            if "provider_reference" in body:
+                intent.provider_reference = str(
+                    body.get(
+                        "provider_reference",
+                        "",
+                    )
+                ).strip()
+
+            if "document_id" in body:
+                document_id = body.get(
+                    "document_id",
+                )
+
+                intent.document_id = str(document_id).strip() if document_id else None
+
+            if status is not None:
+                intent.status = status
+
+            intent.updated_at = datetime.utcnow()
+
+            intent.update(
+                conn=conn,
+            )
+
+            conn.commit(conn)
+
+        except cherrypy.HTTPError:
+            conn.rollback(conn)
+            raise
+
+        except Exception as error:
+            conn.rollback(conn)
+
+            raise cherrypy.HTTPError(
+                500,
+                ("Problem updating shopping cart " "checkout intent: {}").format(error),
+            )
+
+        return self.__serialize_checkout_intent(intent)
+
+    def __serialize_checkout_intent(
+        self,
+        intent,
+    ):
+        return {
+            "cart_id": intent.cart_id,
+            "provider": intent.provider,
+            "provider_reference": intent.provider_reference,
+            "document_id": intent.document_id,
+            "status": intent.status,
+            "delivery_address": {
+                "name": intent.name,
+                "email": intent.email,
+                "phone": intent.phone,
+                "street": intent.street,
+                "exteriorNumber": intent.exterior_number,
+                "interiorNumber": intent.interior_number,
+                "neighborhood": intent.neighborhood,
+                "postalCode": intent.postal_code,
+                "city": intent.city,
+                "state": intent.state,
+                "reference": intent.reference,
+            },
+            "created_at": intent.created_at,
+            "updated_at": intent.updated_at,
+        }

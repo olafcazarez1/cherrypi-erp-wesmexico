@@ -1060,6 +1060,70 @@ CREATE TABLE `shopping_cart_item_taxes` (
         REFERENCES `taxes` (`tax_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
+CREATE TABLE `shopping_cart_checkout_intents` (
+    `cart_id` CHAR(36) NOT NULL,
+
+    `provider` ENUM(
+        'paypal',
+        'mercado_pago'
+    ) NOT NULL,
+
+    `provider_reference` CHAR(128) NOT NULL DEFAULT '',
+
+    `document_id` CHAR(36) DEFAULT NULL,
+
+    `name` CHAR(120) NOT NULL DEFAULT '',
+    `email` CHAR(127) NOT NULL DEFAULT '',
+    `phone` CHAR(10) NOT NULL DEFAULT '',
+
+    `street` CHAR(60) NOT NULL DEFAULT '',
+    `exterior_number` CHAR(10) NOT NULL DEFAULT '',
+    `interior_number` CHAR(10) NOT NULL DEFAULT '',
+
+    `neighborhood` CHAR(60) NOT NULL DEFAULT '',
+    `postal_code` CHAR(10) NOT NULL DEFAULT '',
+
+    `city` CHAR(60) NOT NULL DEFAULT '',
+    `state` CHAR(60) NOT NULL DEFAULT '',
+
+    `reference` VARCHAR(512) NOT NULL DEFAULT '',
+
+    `status` ENUM(
+        'pending',
+        'processing',
+        'completed',
+        'failed'
+    ) NOT NULL DEFAULT 'pending',
+
+    `created_at` TIMESTAMP NOT NULL
+        DEFAULT '2000-01-01 00:00:00',
+
+    `updated_at` TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`cart_id`),
+
+    UNIQUE KEY `uk_checkout_intent_provider_reference` (
+        `provider`,
+        `provider_reference`
+    ),
+
+    KEY `idx_checkout_intent_status` (`status`),
+
+    KEY `idx_checkout_intent_document` (`document_id`),
+
+    CONSTRAINT `fk_checkout_intent_cart`
+        FOREIGN KEY (`cart_id`)
+        REFERENCES `shopping_carts` (`cart_id`)
+        ON DELETE CASCADE,
+
+    CONSTRAINT `fk_checkout_intent_document`
+        FOREIGN KEY (`document_id`)
+        REFERENCES `sales_documents` (`document_id`)
+        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE `sales_documents` (
 	`document_id` CHAR(36) NOT NULL,
 	`company_id` CHAR(36) NOT NULL,
