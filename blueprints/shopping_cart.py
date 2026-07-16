@@ -659,6 +659,7 @@ class MapShoppingCart(object):
         seller_id = employee.employee_id
 
         provider = str(payment_body.get("provider", "")).strip().lower()
+        provider_label = provider.replace("_", " ").title()
 
         provider_order_id = str(payment_body.get("provider_order_id", "")).strip()
 
@@ -684,19 +685,19 @@ class MapShoppingCart(object):
         if not provider_order_id:
             raise cherrypy.HTTPError(
                 400,
-                f"Missing {provider} order ID",
+                f"Missing {provider_label} order ID",
             )
 
         if not provider_transaction_id:
             raise cherrypy.HTTPError(
                 400,
-                f"Missing {provider} transaction ID",
+                f"Missing {provider_label} transaction ID",
             )
 
         if provider_status not in ["COMPLETED", "APPROVED"]:
             raise cherrypy.HTTPError(
                 409,
-                f"{provider} payment is not completed",
+                f"{provider_label} payment is not completed",
             )
 
         required_address_fields = [

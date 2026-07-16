@@ -502,7 +502,7 @@ class Notification(object):
                 ).upper()
             ),
             "#delivery_address#": self._build_delivery_address_html(address),
-            "#payment_method#": "PayPal",
+            "#payment_method#": payment.get("provider").replace("_", " ").title(),
             "#payment_reference#": html.escape(
                 str(
                     payment.get(
@@ -586,6 +586,7 @@ class Notification(object):
                     )
                 ).upper()
             ),
+            "#payment_method#": payment.get("provider", "").replace("_", " ").title(),
             "#payment_reference#": html.escape(
                 str(
                     payment.get(
