@@ -675,7 +675,7 @@ class MapShoppingCart(object):
 
         captured_currency = str(payment_body.get("currency", "")).strip().lower()
 
-        if provider != "paypal":
+        if provider not in ["paypal", "mercado_pago"]:
             raise cherrypy.HTTPError(
                 400,
                 "Invalid payment provider",
