@@ -684,19 +684,19 @@ class MapShoppingCart(object):
         if not provider_order_id:
             raise cherrypy.HTTPError(
                 400,
-                "Missing PayPal order ID",
+                f"Missing {provider} order ID",
             )
 
         if not provider_transaction_id:
             raise cherrypy.HTTPError(
                 400,
-                "Missing PayPal transaction ID",
+                f"Missing {provider} transaction ID",
             )
 
         if provider_status != "COMPLETED":
             raise cherrypy.HTTPError(
                 409,
-                "PayPal payment is not completed",
+                f"{provider} payment is not completed",
             )
 
         required_address_fields = [
@@ -790,7 +790,7 @@ class MapShoppingCart(object):
                 }
 
             # -------------------------------------
-            # Idempotency by PayPal capture ID
+            # Idempotency by payment capture ID
             # -------------------------------------
 
             existing_payment = (
@@ -1040,7 +1040,7 @@ class MapShoppingCart(object):
             document_total = self.__money(products_total + shipping_amount)
 
             # -------------------------------------
-            # Validate PayPal capture
+            # Validate payment capture
             # -------------------------------------
 
             document_currency = str(cart.currency or "mxn").lower()
@@ -1110,7 +1110,7 @@ class MapShoppingCart(object):
             document.transaction_date = transaction_date
             document.is_signed = False
 
-            document.notes = ("Pedido web. PayPal order: {}").format(provider_order_id)
+            document.notes = ("Pedido web. {} order: {}").format(provider, provider_order_id)
 
             document.status = "active"
             document.created_at = transaction_date
