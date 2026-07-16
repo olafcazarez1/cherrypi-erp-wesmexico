@@ -693,7 +693,7 @@ class MapShoppingCart(object):
                 f"Missing {provider} transaction ID",
             )
 
-        if provider_status != "COMPLETED":
+        if provider_status not in ["COMPLETED", "APPROVED"]:
             raise cherrypy.HTTPError(
                 409,
                 f"{provider} payment is not completed",
