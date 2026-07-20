@@ -1,6 +1,7 @@
 import json
 import uuid
 import cherrypy
+import pymysql
 import traceback
 
 from datetime import datetime, timedelta
@@ -271,6 +272,10 @@ class MapShoppingCart(object):
         except cherrypy.HTTPError:
             conn.rollback(conn)
             raise
+
+        except pymysql.err.IntegrityError as error:
+            conn.rollback(conn)
+            raise cherrypy.HTTPError(409, str(error))
 
         except Exception as error:
             conn.rollback(conn)
