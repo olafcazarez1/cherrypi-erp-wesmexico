@@ -541,7 +541,7 @@ class MapProducts(object):
 
         result = ProductRelated().where({"product_id": product_id}, {"status": "active"}).all(conn=conn)
 
-        items = []
+        products_related = []
         for item in result.all():
             related = Product().where({"product_id": item.item_id}).one_or_none(conn=conn)
 
@@ -549,7 +549,7 @@ class MapProducts(object):
             m_data = item.as_dict()
             m_data["product"] = related.as_dict()
             m_data["measure"] = related_measure.as_dict()
-            items.append(m_data)
+            products_related.append(m_data)
 
         product = product.as_dict()
         product["brand"] = brand.as_dict()
@@ -558,7 +558,7 @@ class MapProducts(object):
         product["subcategory"] = subcategory.as_dict()
         product["measures"] = measures
         product["taxes"] = taxes
-        product["items"] = items
+        product["related"] = products_related
 
         return product
 
@@ -581,7 +581,7 @@ class MapProducts(object):
             "type",
             "measures",
             "taxes",
-            "items",
+            "related",
             "has_units",
             "status",
         ]
@@ -595,7 +595,7 @@ class MapProducts(object):
 
         measures = body.get("measures", [])
         taxes = body.get("taxes", [])
-        items = body.get("items", [])
+        related = body.get("related", [])
 
         conn = Product().get_connection()
         category = Category().where({"category_id": category_id}).one_or_none(conn=conn)
@@ -677,7 +677,7 @@ class MapProducts(object):
                 item.update(conn=conn)
 
             # add new related products
-            for item in items:
+            for item in related:
                 related = ProductRelated()
                 related.product_id = product_id
                 related.set_attrs(item, validate_unknown=False, ignore_restricted=True)
@@ -1110,16 +1110,14 @@ class MapProducts(object):
                 unit["insurance_expiration_date"] = "undefined"
 
                 if unit["has_insurance"]:
-                    sql = (
-                        """
+                    sql = ("""
                             SELECT *, (`expiration_date` > NOW()) AS `is_valid`
                             FROM `{table}`
                             WHERE
                                 `product_id`=%s AND
                                 `unit_id`=%s
 
-                        """
-                    ).format(table=ProductUnitCarInsurance()._TABLE)
+                        """).format(table=ProductUnitCarInsurance()._TABLE)
 
                     args = [
                         unit["product_id"],
@@ -1130,15 +1128,13 @@ class MapProducts(object):
                     unit["insurance_expiration_date"] = rows[0]["expiration_date"]
 
                 if unit["has_circulation_card"]:
-                    sql = (
-                        """
+                    sql = ("""
                             SELECT *, (`expiration_date` > NOW()) AS `is_valid`
                             FROM `{table}`
                             WHERE
                                 `product_id`=%s AND
                                 `unit_id`=%s
-                        """
-                    ).format(table=ProductUnitCarCirculationCard()._TABLE)
+                        """).format(table=ProductUnitCarCirculationCard()._TABLE)
 
                     args = [
                         unit["product_id"],
@@ -1183,16 +1179,14 @@ class MapProducts(object):
                     )
 
             # in maintenance
-            sql = (
-                """
+            sql = ("""
                     SELECT count(*) AS `total`
                     FROM `{table}`
                     WHERE
                         `product_id`=%s AND
                         `unit_id`=%s AND
                         `status` = "in-progress"
-                """
-            ).format(table=UnitMaintenance()._TABLE)
+                """).format(table=UnitMaintenance()._TABLE)
 
             args = [
                 unit["product_id"],
@@ -1277,14 +1271,12 @@ class MapProducts(object):
                 unit.update(conn=conn)
 
             # remove concepts
-            sql = (
-                """
+            sql = ("""
                     DELETE FROM `{table}`
                     WHERE
                         `product_id` = %s AND
                         `unit_id` = %s
-                """
-            ).format(table=ProductUnitSpec()._TABLE)
+                """).format(table=ProductUnitSpec()._TABLE)
             args = [product_id, unit_id]
             conn.execute(sql, *args, connection=None)
 
@@ -1740,13 +1732,11 @@ class MapProducts(object):
             conn.begin(conn)
 
             # remove documents
-            sql = (
-                """
+            sql = ("""
                     DELETE FROM `{table}`
                     WHERE
                         `assignment_id` = %s
-                """
-            ).format(table=ProductUnitAssignmentDocument()._TABLE)
+                """).format(table=ProductUnitAssignmentDocument()._TABLE)
 
             args = [assignment_id]
             conn.execute(sql, *args, connection=None)
@@ -2086,13 +2076,11 @@ class MapProducts(object):
             conn.begin(conn)
 
             # remove concepts
-            sql = (
-                """
+            sql = ("""
                     DELETE FROM `{table}`
                     WHERE
                         `assignment_id` = %s
-                """
-            ).format(table=ProductAssignmentDocument()._TABLE)
+                """).format(table=ProductAssignmentDocument()._TABLE)
 
             args = [assignment_id]
             conn.execute(sql, *args, connection=None)

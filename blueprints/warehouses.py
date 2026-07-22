@@ -15,6 +15,7 @@ from models.version import Version
 from models.product import Product
 from models.product_tax import ProductTax
 from models.product_unit import ProductUnit
+from models.product_related import ProductRelated
 from models.stock import Stock
 from models.measure import Measure
 from models.custom import CustomOffice
@@ -445,6 +446,37 @@ class MapWarehouses(object):
             product["taxes"].append(tax)
 
         product["taxes"] = sorted(product["taxes"], key=lambda i: i["name"])
+
+        result = ProductRelated().where({"product_id": product_id}, {"status": "active"}).all(conn=conn)
+        products_related = []
+        for item in result.all():
+            related = Product().where({"product_id": item.item_id}).one_or_none(conn=conn)
+
+            related_measure = Measure().where({"measure_id": item.measure_id}).one_or_none(conn=conn)
+
+            stock = (
+                Stock()
+                .where(
+                    {"warehouse_id": warehouse_id},
+                    {"product_id": item.item_id},
+                    {"measure_id": item.measure_id},
+                    {"status": "active"},
+                )
+                .one_or_none(conn=conn)
+            )
+
+            related_measure = related_measure.as_dict()
+            related_measure["warehouse_id"] = warehouse_id
+            related_measure["quantity"] = stock.quantity if stock else 0
+            related_measure["discount"] = stock.discount if stock else 0
+            related_measure["price"] = stock.price if stock else 0
+
+            m_data = item.as_dict()
+            m_data["product"] = related.as_dict()
+            m_data["measure"] = related_measure
+            products_related.append(m_data)
+
+        product["related"] = products_related
 
         return product
 
