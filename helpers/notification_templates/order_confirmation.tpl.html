@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmación de compra</title>
+</head>
+
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7fb;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #243446;
+">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f7fb;">
+        <tr>
+            <td align="center" style="padding: 32px 16px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="
+                        max-width: 680px;
+                        background-color: #ffffff;
+                        border: 1px solid #dce5ee;
+                        border-radius: 18px;
+                        overflow: hidden;
+                        box-shadow: 0 10px 30px rgba(30, 58, 95, 0.08);
+                    ">
+                    <tr>
+                        <td align="center" style="
+                                padding: 30px 32px 22px;
+                                background-color: #1e3a5f;
+                                color: #ffffff;
+                            ">
+                            <div style="font-size: 28px; font-weight: bold; letter-spacing: 0.04em;">
+                                WESMEXICO
+                            </div>
+                            <div style="
+                                margin-top: 8px;
+                                font-size: 12px;
+                                letter-spacing: 1.8px;
+                                text-transform: uppercase;
+                                color: #dbe8f6;
+                            ">
+                                ERP · CRM · GPS · Soluciones Tecnológicas
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 32px;">
+                            <h1 style="
+                                margin: 0 0 14px;
+                                text-align: center;
+                                color: #1e3a5f;
+                                font-size: 29px;
+                                line-height: 1.25;
+                            ">
+                                ¡Gracias por confiar en WesMexico!
+                            </h1>
+
+                            <p style="
+                                margin: 0 0 28px;
+                                text-align: center;
+                                color: #667085;
+                                line-height: 1.65;
+                            ">
+                                Hola #client_name#, su compra fue registrada correctamente.
+                                Nuestro equipo procesará la solicitud y le mantendrá informado sobre los siguientes pasos.
+                            </p>
+
+                            <div style="
+                                margin-bottom: 28px;
+                                padding: 20px;
+                                border: 1px solid #dce5ee;
+                                border-radius: 14px;
+                                background-color: #eef4fa;
+                                text-align: center;
+                            ">
+                                <div style="
+                                    color: #667085;
+                                    font-size: 12px;
+                                    text-transform: uppercase;
+                                    letter-spacing: 1px;
+                                ">
+                                    Número de orden
+                                </div>
+                                <div style="
+                                    margin-top: 8px;
+                                    color: #2e67a8;
+                                    font-size: 22px;
+                                    font-weight: bold;
+                                ">
+                                    #document_code#
+                                </div>
+                            </div>
+
+                            <h2 style="margin: 0 0 12px; color: #1e3a5f; font-size: 20px;">
+                                Productos y servicios
+                            </h2>
+
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="
+                                    border-collapse: collapse;
+                                    margin-bottom: 28px;
+                                ">
+                                <thead>
+                                    <tr style="background-color: #eef4fa;">
+                                        <th align="left" style="padding: 10px 8px; color: #1e3a5f;">
+                                            Concepto
+                                        </th>
+                                        <th align="center" style="padding: 10px 8px; color: #1e3a5f;">
+                                            Cantidad
+                                        </th>
+                                        <th align="right" style="padding: 10px 8px; color: #1e3a5f;">
+                                            Precio
+                                        </th>
+                                        <th align="right" style="padding: 10px 8px; color: #1e3a5f;">
+                                            Total
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    #products#
+                                </tbody>
+                            </table>
+
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="
+                                    margin-bottom: 28px;
+                                    background-color: #f8fafc;
+                                    border: 1px solid #dce5ee;
+                                    border-radius: 14px;
+                                ">
+                                <tr>
+                                    <td style="padding: 16px 20px; color: #667085;">Subtotal</td>
+                                    <td align="right" style="padding: 16px 20px;">$#subtotal#</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0 20px 16px; color: #667085;">IVA incluido</td>
+                                    <td align="right" style="padding: 0 20px 16px;">$#taxes#</td>
+                                </tr>
+                                <tr>
+                                    <td style="
+                                        padding: 16px 20px;
+                                        border-top: 1px solid #dce5ee;
+                                        color: #1e3a5f;
+                                        font-size: 18px;
+                                        font-weight: bold;
+                                    ">
+                                        Total pagado
+                                    </td>
+                                    <td align="right" style="
+                                        padding: 16px 20px;
+                                        border-top: 1px solid #dce5ee;
+                                        color: #198754;
+                                        font-size: 20px;
+                                        font-weight: bold;
+                                    ">
+                                        $#total# #currency#
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <h2 style="margin: 0 0 12px; color: #1e3a5f; font-size: 20px;">
+                                Información de entrega
+                            </h2>
+
+                            <div style="
+                                margin-bottom: 28px;
+                                padding: 18px 20px;
+                                border: 1px solid #dce5ee;
+                                border-radius: 14px;
+                                background-color: #f8fafc;
+                                color: #475467;
+                                line-height: 1.7;
+                            ">
+                                #delivery_address#
+                            </div>
+
+                            <h2 style="margin: 0 0 12px; color: #1e3a5f; font-size: 20px;">
+                                Detalles del pago
+                            </h2>
+
+                            <div style="
+                                padding: 18px 20px;
+                                border: 1px solid #dce5ee;
+                                border-radius: 14px;
+                                background-color: #f8fafc;
+                                line-height: 1.7;
+                            ">
+                                <strong>Método:</strong> #payment_method#<br>
+                                <strong>Referencia:</strong> #payment_reference#
+                            </div>
+
+                            <div style="
+                                margin-top: 28px;
+                                padding: 18px 20px;
+                                border-left: 4px solid #2e67a8;
+                                border-radius: 10px;
+                                background-color: #eef4fa;
+                                color: #475467;
+                                line-height: 1.65;
+                            ">
+                                <strong style="color: #1e3a5f;">Próximos pasos</strong><br>
+                                Recibirá por correo electrónico cualquier actualización relacionada con su compra.
+                                Si adquirió una licencia, servicio o solución tecnológica, nuestro equipo se pondrá en contacto con usted para coordinar la activación, implementación o seguimiento correspondiente.
+                            </div>
+
+                            <p style="
+                                margin: 30px 0 0;
+                                text-align: center;
+                                color: #667085;
+                                line-height: 1.6;
+                            ">
+                                Gracias por elegir WesMexico.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="center" style="
+                                padding: 20px 32px;
+                                background-color: #1e3a5f;
+                                color: #dbe8f6;
+                                font-size: 12px;
+                                line-height: 1.6;
+                            ">
+                            WesMexico · Grupo JUCAVZA de México S.A. de C.V.<br>
+                            ERP · CRM · GPS · Desarrollo de Software
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

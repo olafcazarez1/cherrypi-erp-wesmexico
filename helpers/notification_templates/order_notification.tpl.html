@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva orden de venta</title>
+</head>
+
+<body style="
+    margin: 0;
+    padding: 24px;
+    background-color: #f4f7fb;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #243446;
+">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="
+            max-width: 760px;
+            margin: auto;
+            background-color: #ffffff;
+            border: 1px solid #dce5ee;
+            border-radius: 16px;
+            border-collapse: separate;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(30, 58, 95, 0.08);
+        ">
+        <tr>
+            <td style="
+                padding: 26px 24px;
+                background-color: #1e3a5f;
+                color: #ffffff;
+            ">
+                <div style="font-size: 12px; letter-spacing: 1.6px; text-transform: uppercase; color: #dbe8f6;">
+                    WesMexico
+                </div>
+                <h1 style="margin: 8px 0 0; font-size: 24px;">
+                    Nueva orden de venta
+                </h1>
+                <p style="margin: 8px 0 0; color: #dbe8f6;">
+                    Orden #document_code#
+                </p>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="padding: 24px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="
+                        margin-bottom: 24px;
+                        background-color: #f8fafc;
+                        border: 1px solid #dce5ee;
+                        border-radius: 12px;
+                    ">
+                    <tr>
+                        <td style="padding: 10px 14px; color: #667085;"><strong>Orden</strong></td>
+                        <td align="right" style="padding: 10px 14px;">#document_code#</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 14px; color: #667085;"><strong>Fecha</strong></td>
+                        <td align="right" style="padding: 10px 14px;">#transaction_date#</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 14px; color: #667085;"><strong>Total</strong></td>
+                        <td align="right" style="padding: 10px 14px; color: #198754; font-weight: bold;">
+                            $#total# #currency#
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 14px; color: #667085;"><strong>Pago</strong></td>
+                        <td align="right" style="padding: 10px 14px;">
+                            #payment_method# · #payment_reference#
+                        </td>
+                    </tr>
+                </table>
+
+                <h2 style="margin: 0 0 12px; color: #1e3a5f; font-size: 19px;">
+                    Productos y servicios
+                </h2>
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="
+                        margin-bottom: 24px;
+                        border-collapse: collapse;
+                    ">
+                    <thead>
+                        <tr style="background-color: #eef4fa;">
+                            <th align="left" style="padding: 10px 8px; color: #1e3a5f;">Concepto</th>
+                            <th align="center" style="padding: 10px 8px; color: #1e3a5f;">Cantidad</th>
+                            <th align="right" style="padding: 10px 8px; color: #1e3a5f;">Precio</th>
+                            <th align="right" style="padding: 10px 8px; color: #1e3a5f;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        #products#
+                    </tbody>
+                </table>
+
+                <h2 style="margin: 0 0 10px; color: #1e3a5f; font-size: 19px;">
+                    Cliente
+                </h2>
+
+                <div style="
+                    margin-bottom: 24px;
+                    padding: 16px;
+                    border: 1px solid #dce5ee;
+                    border-radius: 12px;
+                    background-color: #f8fafc;
+                    line-height: 1.7;
+                ">
+                    <strong>#client_name#</strong><br>
+                    #client_phone#<br>
+                    #client_email#
+                </div>
+
+                <h2 style="margin: 0 0 10px; color: #1e3a5f; font-size: 19px;">
+                    Información de entrega
+                </h2>
+
+                <div style="
+                    margin-bottom: 24px;
+                    padding: 16px;
+                    border: 1px solid #dce5ee;
+                    border-radius: 12px;
+                    background-color: #f8fafc;
+                    color: #475467;
+                    line-height: 1.7;
+                ">
+                    #delivery_address#
+                </div>
+
+                <h2 style="margin: 0 0 10px; color: #1e3a5f; font-size: 19px;">
+                    Referencias y observaciones
+                </h2>
+
+                <div style="
+                    padding: 16px;
+                    border: 1px solid #d7e4f1;
+                    border-left: 4px solid #2e67a8;
+                    border-radius: 12px;
+                    background-color: #eef4fa;
+                    color: #475467;
+                    line-height: 1.7;
+                ">
+                    #references#
+                </div>
+            </td>
+        </tr>
+
+        <tr>
+            <td align="center" style="
+                padding: 16px 24px;
+                background-color: #1e3a5f;
+                color: #dbe8f6;
+                font-size: 12px;
+            ">
+                Notificación interna · WesMexico
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

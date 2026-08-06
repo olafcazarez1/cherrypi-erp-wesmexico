@@ -34,6 +34,11 @@ class Model(Query):
     _ALIAS = {}
     _IDS = []
 
+    _BINARY = []
+    _UNIQUE = []
+
+    _FILTER_LIMIT_DEFAULT = 50
+
     def __init__(self):
         """Constructor"""
         super().__init__(self)

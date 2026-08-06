@@ -445,6 +445,7 @@ class MapWarehouses(object):
             product["taxes"].append(tax)
 
         product["taxes"] = sorted(product["taxes"], key=lambda i: i["name"])
+        product["related"] = []
 
         return product
 

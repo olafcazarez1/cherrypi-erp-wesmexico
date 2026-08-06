@@ -1567,6 +1567,220 @@ CREATE TABLE `purchase_orders_documents_details` (
 	FOREIGN KEY (`product_id`, `measure_id`) REFERENCES `products_measures` (`product_id`, `measure_id`)
 ) ENGINE=INNODB DEFAULT CHARSET=UTF8;
 
+create table `sales_documents_delivery_addresses`(
+	`document_id` char(36) primary key,
+	`name` char(120) not null default '',
+	`email` VARCHAR(254) NOT NULL DEFAULT '',
+	`address_street` char(60) not null default '',
+	`address_external_number` char(10) not null default '',
+	`address_internal_number` char(10) not null default '',
+	`neighborhood` char(60) default '',
+	`state_id` char(36) NULL,
+	`municipality_id` char(36) NULL,
+	`locality_id` char(36) not null NULL,
+	`zip` char(5) not null default '',
+	`phone` char(10) not null default '',
+	`references` VARCHAR(512) not null default '',
+	`created_at` timestamp not null default '2000-01-01 00:00:00',
+	`updated_at` timestamp not null default current_timestamp on update current_timestamp ,
+	`status` enum('active', 'inactive') not null default 'active',
+	index (`phone`),
+	FOREIGN KEY (`document_id`) REFERENCES `sales_documents` (`document_id`) ON DELETE CASCADE
+) engine=innodb default CHARSET=utf8;
+
+CREATE TABLE `shopping_carts` (
+    `cart_id` CHAR(36) NOT NULL DEFAULT '',
+    `cart_token` CHAR(36) NOT NULL DEFAULT '',
+
+    `branch_id` CHAR(36) NOT NULL DEFAULT '',
+    `warehouse_id` CHAR(36) NOT NULL DEFAULT '',
+
+    -- `register_id` CHAR(36) NOT NULL DEFAULT '',
+    `client_id` CHAR(36) NOT NULL DEFAULT '',
+    `user_id` CHAR(36) NOT NULL DEFAULT '',
+
+    `currency` CHAR(4) NOT NULL DEFAULT 'mxn',
+    `exchange_rate` DECIMAL(14, 6) NOT NULL DEFAULT 1,
+
+    `status` ENUM(
+        'active',
+        'converted',
+        'abandoned',
+        'cancelled'
+    ) NOT NULL DEFAULT 'active',
+
+    `expires_at` TIMESTAMP NULL,
+
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`cart_id`),
+
+    UNIQUE KEY `uk_shopping_carts_token` (`cart_token`),
+
+    KEY `idx_shopping_carts_user_status`
+        (`user_id`, `status`),
+
+    KEY `idx_shopping_carts_client_status`
+        (`client_id`, `status`),
+
+    KEY `idx_shopping_carts_status_expires`
+        (`status`, `expires_at`),
+
+    CONSTRAINT `fk_shopping_carts_branch_warehouse`
+        FOREIGN KEY (`branch_id`, `warehouse_id`)
+        REFERENCES `branch_offices_warehouses`
+        (`branch_id`, `warehouse_id`),
+
+    -- CONSTRAINT `fk_shopping_carts_register`
+    --     FOREIGN KEY (`register_id`)
+    --     REFERENCES `cash_registers` (`register_id`),
+
+    CONSTRAINT `fk_shopping_carts_client`
+        FOREIGN KEY (`client_id`)
+        REFERENCES `clients` (`client_id`)
+
+    -- CONSTRAINT `fk_shopping_carts_user`
+    --     FOREIGN KEY (`user_id`)
+    --     REFERENCES `users` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+CREATE TABLE `shopping_cart_items` (
+    `cart_item_id` CHAR(36) NOT NULL,
+    `cart_id` CHAR(36) NOT NULL,
+
+    `product_id` CHAR(36) NOT NULL,
+    `measure_id` CHAR(36) NOT NULL,
+
+    `equivalence` DECIMAL(14, 4) NOT NULL DEFAULT 1,
+    `quantity` DECIMAL(14, 4) NOT NULL DEFAULT 1,
+
+    `currency` CHAR(4) NOT NULL DEFAULT 'mxn',
+
+    `original_price` DECIMAL(14, 2) NOT NULL DEFAULT 0,
+    `unit_price` DECIMAL(14, 2) NOT NULL DEFAULT 0,
+    `discount_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0,
+
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`cart_item_id`),
+
+    UNIQUE KEY `uk_shopping_cart_item_product_measure`
+        (`cart_id`, `product_id`, `measure_id`),
+
+    KEY `idx_shopping_cart_items_cart`
+        (`cart_id`),
+
+    KEY `idx_shopping_cart_items_product_measure`
+        (`product_id`, `measure_id`),
+
+    CONSTRAINT `fk_shopping_cart_items_cart`
+        FOREIGN KEY (`cart_id`)
+        REFERENCES `shopping_carts` (`cart_id`)
+        ON DELETE CASCADE,
+
+    CONSTRAINT `fk_shopping_cart_items_product_measure`
+        FOREIGN KEY (`product_id`, `measure_id`)
+        REFERENCES `products_measures`
+        (`product_id`, `measure_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+CREATE TABLE `shopping_cart_item_taxes` (
+    `cart_item_id` CHAR(36) NOT NULL,
+    `tax_id` CHAR(36) NOT NULL,
+
+    `percent` DECIMAL(8, 4) NOT NULL DEFAULT 0,
+    `tax_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0,
+
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`cart_item_id`, `tax_id`),
+
+    KEY `idx_shopping_cart_item_taxes_tax`
+        (`tax_id`),
+
+    CONSTRAINT `fk_shopping_cart_item_taxes_item`
+        FOREIGN KEY (`cart_item_id`)
+        REFERENCES `shopping_cart_items` (`cart_item_id`)
+        ON DELETE CASCADE,
+
+    CONSTRAINT `fk_shopping_cart_item_taxes_tax`
+        FOREIGN KEY (`tax_id`)
+        REFERENCES `taxes` (`tax_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+CREATE TABLE `shopping_cart_checkout_intents` (
+    `cart_id` CHAR(36) NOT NULL,
+
+    `provider` ENUM(
+        'paypal',
+        'mercado_pago'
+    ) NOT NULL,
+
+    `provider_reference` CHAR(128) NOT NULL DEFAULT '',
+
+    `document_id` CHAR(36) DEFAULT NULL,
+
+    `name` CHAR(120) NOT NULL DEFAULT '',
+    `email` CHAR(127) NOT NULL DEFAULT '',
+    `phone` CHAR(10) NOT NULL DEFAULT '',
+
+    `street` CHAR(60) NOT NULL DEFAULT '',
+    `exterior_number` CHAR(10) NOT NULL DEFAULT '',
+    `interior_number` CHAR(10) NOT NULL DEFAULT '',
+
+    `neighborhood` CHAR(60) NOT NULL DEFAULT '',
+    `postal_code` CHAR(10) NOT NULL DEFAULT '',
+
+    `city` CHAR(60) NOT NULL DEFAULT '',
+    `state` CHAR(60) NOT NULL DEFAULT '',
+
+    `reference` VARCHAR(512) NOT NULL DEFAULT '',
+
+    `status` ENUM(
+        'pending',
+        'processing',
+        'completed',
+        'failed'
+    ) NOT NULL DEFAULT 'pending',
+
+    `created_at` TIMESTAMP NOT NULL
+        DEFAULT '2000-01-01 00:00:00',
+
+    `updated_at` TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`cart_id`),
+
+    UNIQUE KEY `uk_checkout_intent_provider_reference` (
+        `provider`,
+        `provider_reference`
+    ),
+
+    KEY `idx_checkout_intent_status` (`status`),
+
+    KEY `idx_checkout_intent_document` (`document_id`),
+
+    CONSTRAINT `fk_checkout_intent_cart`
+        FOREIGN KEY (`cart_id`)
+        REFERENCES `shopping_carts` (`cart_id`)
+        ON DELETE CASCADE,
+
+    CONSTRAINT `fk_checkout_intent_document`
+        FOREIGN KEY (`document_id`)
+        REFERENCES `sales_documents` (`document_id`)
+        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 
 CREATE VIEW `v_branch_offices_warehouses` AS 
 SELECT

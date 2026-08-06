@@ -24,6 +24,7 @@ from blueprints.taxes import MapTaxes
 from blueprints.brands import MapBrands
 from blueprints.warehouses import MapWarehouses
 from blueprints.products import MapProducts
+from blueprints.shopping_cart import MapShoppingCart
 from blueprints.quote_document import MapQuoteDocument
 from blueprints.sale_document import MapSaleDocument
 from blueprints.delivery_orders import MapDeliveryOrders
@@ -117,6 +118,7 @@ def main():
     m_brands = MapBrands()
     m_warehouses = MapWarehouses()
     m_products = MapProducts()
+    m_shopping_cart = MapShoppingCart()
     m_quotes = MapQuoteDocument()
     m_sales = MapSaleDocument()
     m_orders = MapDeliveryOrders()
@@ -149,6 +151,7 @@ def main():
     m_brands.init(mapping)
     m_warehouses.init(mapping)
     m_products.init(mapping)
+    m_shopping_cart.init(mapping)
     m_quotes.init(mapping)
     m_sales.init(mapping)
     m_orders.init(mapping)
