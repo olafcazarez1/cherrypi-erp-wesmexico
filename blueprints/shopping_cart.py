@@ -662,10 +662,7 @@ class MapShoppingCart(object):
                 .where(
                     {
                         "cart_id": requested_cart_id,
-                    },
-                    {
-                        "status": "active",
-                    },
+                    }
                 )
                 .one_or_none(
                     conn=conn,
