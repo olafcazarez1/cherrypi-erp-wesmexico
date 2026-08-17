@@ -30,7 +30,7 @@ class DeliveryAddress(Model):
         "neighborhood",
         "state_id",
         "municipality_id",
-        "locality_id",
+        # "locality_id",
         "zip",
         "phone",
         "references",
