@@ -26,6 +26,40 @@ CREATE TABLE `images_and_documents` (
     KEY `document_id` (`document_id`)
 ) ENGINE=INNODB DEFAULT CHARSET=UTF8;
 
+CREATE TABLE `documents` (
+    `document_id` CHAR(36) NOT NULL,
+
+    `source` VARCHAR(64) NOT NULL DEFAULT '',
+    `parent_id` CHAR(36) NOT NULL DEFAULT '',
+
+    `category` VARCHAR(64) NOT NULL DEFAULT '',
+    `subcategory` VARCHAR(64) NOT NULL DEFAULT '',
+
+    `data` JSON NULL,
+
+    `status` ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+
+    `created_at` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`document_id`),
+
+    INDEX `idx_documents_source` (
+        `source`,
+        `parent_id`
+    ),
+
+    INDEX `idx_documents_type` (
+        `source`,
+        `parent_id`,
+        `category`,
+        `subcategory`
+    ),
+
+    INDEX (`status`)
+) ENGINE=INNODB DEFAULT CHARSET=UTF8;
+
 CREATE TABLE `series` (
     `serie_id` CHAR(128) PRIMARY KEY,
     `reference` CHAR(128) NOT NULL DEFAULT '',

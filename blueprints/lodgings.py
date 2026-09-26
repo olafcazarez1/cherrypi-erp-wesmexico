@@ -1,3 +1,4 @@
+import json
 import cherrypy
 import pymysql
 
@@ -10,6 +11,7 @@ from utils.utils import Utils
 from datetime import datetime
 from models.serie import Serie
 
+from models.document import Document
 from models.lodging import Lodging
 from models.lodging_amenity import LodgingAmenity
 from models.lodging_amenity_assignment import LodgingAmenityAssignment
@@ -182,6 +184,20 @@ class MapLodgings(object):
             )
         )
 
+        response["photos"] = (
+            Document()
+            .where(
+                {"parent_id": lodging.lodging_id},
+            )
+            .all(
+                conn=conn,
+                collection=False,
+            )
+        )
+
+        for photo in response["photos"]:
+            photo["data"] = json.loads(photo["data"])
+
         response.update(HelperLocality.get(item=response, conn=conn))
 
         return response
@@ -219,6 +235,7 @@ class MapLodgings(object):
             "observations",
             "status",
             "amenities",
+            "photos",
         ]
     )
     def save_lodging(self, **kwargs):
@@ -226,6 +243,7 @@ class MapLodgings(object):
         body = cherrypy.request.json
         lodging_id = body.get("lodging_id", None)
         amenities = body.pop("amenities", [])
+        photos = body.pop("photos", [])
 
         conn = Lodging().get_connection()
 
@@ -276,6 +294,47 @@ class MapLodgings(object):
                 assignment.created_at = datetime.utcnow()
 
                 assignment.insert(conn=conn)
+
+            #
+            # Remove current gallery photos
+            #
+            sql = ("""
+                    DELETE FROM `{table}`
+                    WHERE
+                        `source` = %s AND
+                        `parent_id` = %s AND
+                        `category` = %s AND
+                        `subcategory` = %s
+                """).format(table=Document()._TABLE)
+
+            conn.execute(sql, "lodging", lodging_id, "photo", "gallery", connection=None)
+
+            #
+            # Insert photos
+            #
+            for photo in photos:
+
+                p_data = json.dumps(photo.pop("data", {}))
+
+                document = Document()
+                document.set_attrs(photo)
+
+                #
+                # Force lodging ownership.
+                #
+                document.source = "lodging"
+                document.parent_id = lodging_id
+                document.category = "photo"
+                document.subcategory = "gallery"
+                document.data = p_data
+
+                document.status = "active"
+
+                document.created_at = datetime.utcnow()
+
+                document.updated_at = datetime.utcnow()
+
+                document.insert(conn=conn)
 
             conn.commit(conn)
 
