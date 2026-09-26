@@ -174,14 +174,19 @@ class MapLodgings(object):
         response = lodging.as_dict()
 
         response["amenities"] = (
-            LodgingAmenityAssignment()
+            LodgingAmenity()
             .where(
-                {"lodging_id": lodging.lodging_id},
+                {
+                    "amenity_id": (
+                        LodgingAmenityAssignment()
+                        .fields(["amenity_id"])
+                        .where({"lodging_id": lodging.lodging_id})
+                        .sql(remove_offset_limit=True)
+                    ),
+                    "op": "in",
+                }
             )
-            .all(
-                conn=conn,
-                collection=False,
-            )
+            .all(collection=False, conn=conn)
         )
 
         response["photos"] = (
