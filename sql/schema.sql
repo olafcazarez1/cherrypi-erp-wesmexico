@@ -1580,9 +1580,10 @@ CREATE TABLE `lodgings_reservations` (
 
     `code` CHAR(32) NOT NULL,
 
-    `guest_name` VARCHAR(128) NOT NULL DEFAULT '',
-    `guest_email` VARCHAR(128) NOT NULL DEFAULT '',
-    `guest_phone` VARCHAR(32) NOT NULL DEFAULT '',
+    `first_name` VARCHAR(120) NOT NULL DEFAULT '',
+    `last_name` VARCHAR(120) NOT NULL DEFAULT '',
+    `email` VARCHAR(255) NOT NULL DEFAULT '',
+    `phone` VARCHAR(50) NOT NULL DEFAULT '';
 
     `check_in` DATE NOT NULL,
     `check_out` DATE NOT NULL,
@@ -1598,9 +1599,10 @@ CREATE TABLE `lodgings_reservations` (
     `observations` TEXT NULL,
 
     `status` ENUM(
+        'pending_payment',
         'confirmed',
         'cancelled',
-        'completed'
+    'completed'
     ) NOT NULL DEFAULT 'confirmed',
 
     `created_at` TIMESTAMP NOT NULL DEFAULT '1990-01-01 00:00:00',
@@ -1661,6 +1663,64 @@ CREATE TABLE `lodgings_reservations_charges` (
         FOREIGN KEY (`reservation_id`)
         REFERENCES `lodgings_reservations` (`reservation_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+CREATE TABLE lodging_reservation_payments (
+    payment_id CHAR(36) NOT NULL,
+
+    reservation_id CHAR(36) NOT NULL,
+
+    provider ENUM(
+        'paypal',
+        'mercado_pago'
+    ) NOT NULL,
+
+    provider_reference VARCHAR(255) DEFAULT NULL,
+
+    provider_payment_id VARCHAR(255) DEFAULT NULL,
+
+    amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+
+    currency VARCHAR(10) NOT NULL DEFAULT 'mxn',
+
+    status ENUM(
+        'pending',
+        'paid',
+        'failed',
+        'cancelled',
+        'refunded'
+    ) NOT NULL DEFAULT 'pending',
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (
+        payment_id
+    ),
+
+    KEY idx_lodging_reservation_payments_reservation (
+        reservation_id
+    ),
+
+    KEY idx_lodging_reservation_payments_provider_reference (
+        provider_reference
+    ),
+
+    KEY idx_lodging_reservation_payments_provider_payment (
+        provider_payment_id
+    ),
+
+    CONSTRAINT fk_lodging_reservation_payments_reservation
+        FOREIGN KEY (
+            reservation_id
+        )
+        REFERENCES lodging_reservations (
+            reservation_id
+        )
+        ON DELETE RESTRICT
+);
 
 
 CREATE TABLE `sales_deliveries_orders` (

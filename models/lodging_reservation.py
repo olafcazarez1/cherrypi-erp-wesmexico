@@ -17,8 +17,10 @@ class LodgingReservation(Model):
         "reservation_id",
         "lodging_id",
         "code",
-        "guest_name",
-        "guest_email",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
         "check_in",
         "check_out",
     ]
@@ -33,9 +35,11 @@ class LodgingReservation(Model):
 
     code = Model.field("code", "")
 
-    guest_name = Model.field("guest_name", "")
-    guest_email = Model.field("guest_email", "")
-    guest_phone = Model.field("guest_phone", "")
+    first_name = Model.field("first_name", "")
+    last_name = Model.field("last_name", "")
+
+    email = Model.field("email", "")
+    phone = Model.field("phone", "")
 
     check_in = Model.field("check_in")
     check_out = Model.field("check_out")

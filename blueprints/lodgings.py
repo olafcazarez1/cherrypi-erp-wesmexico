@@ -1,3 +1,4 @@
+import uuid
 import json
 import cherrypy
 import pymysql
@@ -16,6 +17,8 @@ from models.lodging import Lodging
 from models.lodging_amenity import LodgingAmenity
 from models.lodging_amenity_assignment import LodgingAmenityAssignment
 from models.lodging_reservation import LodgingReservation
+from models.lodging_reservation_charge import LodgingReservationCharge
+from models.lodging_reservation_payment import LodgingReservationPayment
 
 
 class MapLodgings(object):
@@ -88,6 +91,56 @@ class MapLodgings(object):
             controller=self,
             action="search_lodgings",
             conditions=dict(method=["GET", "OPTIONS"]),
+        )
+
+        # Reservation
+
+        mapper.connect(
+            "create_lodging_reservation",
+            "/lodging-reservation",
+            controller=self,
+            action="create_lodging_reservation",
+            conditions=dict(method=["POST", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "get_lodging_reservation",
+            "/lodging-reservation/{reservation_id}",
+            controller=self,
+            action="get_lodging_reservation",
+            conditions=dict(method=["GET", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "create_lodging_reservation_payment",
+            "/lodging-reservation/{reservation_id}/payment",
+            controller=self,
+            action="create_reservation_payment",
+            conditions=dict(method=["GET", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "get_lodging_reservation_payments",
+            "/lodging-reservation/{reservation_id}/payments",
+            controller=self,
+            action="get_reservation_payments",
+            conditions=dict(method=["GET", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "get_lodging_reservation_payment",
+            "/lodging-reservation-payment/{payment_id}",
+            controller=self,
+            action="get_reservation_payment",
+            conditions=dict(method=["GET", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "update_lodging_reservation_payment",
+            "/lodging-reservation-payment/{payment_id}",
+            controller=self,
+            action="update_reservation_payment",
+            conditions=dict(method=["PATCH", "OPTIONS"]),
         )
 
     # -------------------------------------------------------------------------
@@ -686,3 +739,345 @@ class MapLodgings(object):
             "results": results,
             "total_rows": total_rows,
         }
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    @tools.validate_body_params(
+        [
+            "lodging_id",
+            "check_in",
+            "check_out",
+            "guests",
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+        ]
+    )
+    def create_lodging_reservation(self, **kwargs):
+
+        data = cherrypy.request.json
+
+        lodging_id = data["lodging_id"]
+
+        check_in = data["check_in"]
+        check_out = data["check_out"]
+
+        guests = int(
+            data.get(
+                "guests",
+                1,
+            )
+            or 1
+        )
+
+        conn = LodgingReservation().get_connection()
+
+        try:
+
+            conn.begin(conn)
+
+            # -------------------------------------------------------------
+            # Lodging
+            # -------------------------------------------------------------
+
+            lodging = (
+                Lodging()
+                .where(
+                    {
+                        "lodging_id": lodging_id,
+                    }
+                )
+                .one_or_none(
+                    conn=conn,
+                )
+            )
+
+            if not lodging:
+
+                raise cherrypy.HTTPError(
+                    404,
+                    "Lodging not found",
+                )
+
+            # -------------------------------------------------------------
+            # Dates
+            # -------------------------------------------------------------
+
+            try:
+
+                check_in_date = datetime.strptime(
+                    check_in,
+                    "%Y-%m-%d",
+                ).date()
+
+                check_out_date = datetime.strptime(
+                    check_out,
+                    "%Y-%m-%d",
+                ).date()
+
+            except ValueError:
+
+                raise cherrypy.HTTPError(
+                    400,
+                    "Invalid date format. Expected YYYY-MM-DD",
+                )
+
+            if check_out_date <= check_in_date:
+
+                raise cherrypy.HTTPError(
+                    400,
+                    "check_out must be greater than check_in",
+                )
+
+            nights = (check_out_date - check_in_date).days
+
+            if guests < 1:
+
+                raise cherrypy.HTTPError(
+                    400,
+                    "guests must be greater than zero",
+                )
+
+            if guests > int(lodging.max_occupancy) or 0:
+
+                raise cherrypy.HTTPError(
+                    400,
+                    "guests exceeds max occupancy",
+                )
+
+            # -------------------------------------------------------------
+            # Availability
+            # -------------------------------------------------------------
+
+            existing = (
+                LodgingReservation()
+                .where(
+                    {
+                        "lodging_id": lodging_id,
+                    },
+                    {
+                        "status": [
+                            "pending_payment",
+                            "confirmed",
+                        ],
+                        "op": "in",
+                    },
+                    {
+                        "check_in": check_out,
+                        "op": "lt",
+                    },
+                    {
+                        "check_out": check_in,
+                        "op": "gt",
+                    },
+                )
+                .one_or_none(
+                    conn=conn,
+                )
+            )
+
+            if existing:
+
+                raise cherrypy.HTTPError(
+                    409,
+                    "Lodging is not available for the selected dates",
+                )
+
+            # -------------------------------------------------------------
+            # Reservation
+            # -------------------------------------------------------------
+
+            data["code"] = Serie.generate(
+                reference="general",
+                key="lodging_reservation",
+                prefix="RSV-",
+                conn=conn,
+            )
+
+            reservation_id = str(uuid.uuid4())
+
+            reservation = LodgingReservation()
+
+            reservation.set_attrs(
+                {
+                    "reservation_id": reservation_id,
+                    "lodging_id": lodging_id,
+                    "code": data["code"],
+                    "check_in": check_in,
+                    "check_out": check_out,
+                    "guests": guests,
+                    "first_name": data["first_name"],
+                    "last_name": data["last_name"],
+                    "email": data["email"],
+                    "phone": data["phone"],
+                    "status": "pending_payment",
+                }
+            )
+
+            reservation.insert(
+                conn=conn,
+            )
+
+            # -------------------------------------------------------------
+            # Lodging charge
+            # -------------------------------------------------------------
+
+            unit_price = float(lodging.price_per_night or 0)
+
+            subtotal = unit_price * nights
+
+            charge = LodgingReservationCharge()
+
+            charge.set_attrs(
+                {
+                    "charge_id": str(uuid.uuid4()),
+                    "reservation_id": reservation_id,
+                    "type": "lodging",
+                    "name": "Hospedaje",
+                    "description": "%s noche(s)" % nights,
+                    "quantity": nights,
+                    "unit_price": unit_price,
+                    "subtotal": subtotal,
+                    "taxes": 0,
+                    "total": subtotal,
+                    "currency": lodging.currency,
+                }
+            )
+
+            charge.insert(
+                conn=conn,
+            )
+
+            # -------------------------------------------------------------
+            # Commit
+            # -------------------------------------------------------------
+
+            conn.commit(conn)
+
+            return {
+                "reservation_id": reservation_id,
+                "status": "pending_payment",
+                "nights": nights,
+                "charges": [
+                    charge.as_dict(),
+                ],
+                "total": subtotal,
+            }
+
+        except Exception:
+
+            conn.rollback(conn)
+
+            raise
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @tools.secured()
+    def get_lodging_reservation(self, reservation_id, **kwargs):
+
+        conn = LodgingReservation().get_connection()
+
+        reservation = LodgingReservation().where({"reservation_id": reservation_id}).one_or_none(conn=conn)
+
+        if reservation is None:
+
+            raise cherrypy.HTTPError(404, "Reservation not found")
+
+        charges = LodgingReservationCharge().where({"reservation_id": reservation_id}).all(collection=False, conn=conn)
+
+        response = reservation.as_dict()
+
+        response["charges"] = charges
+
+        return response
+
+    # -------------------------------------------------------------------------
+    # CREATE RESERVATION PAYMENT
+    # -------------------------------------------------------------------------
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    @tools.validate_body_params(
+        [
+            "provider",
+        ]
+    )
+    def create_reservation_payment(self, reservation_id, **kwargs):
+
+        body = cherrypy.request.json
+
+        provider = body.get("provider")
+
+        if provider not in ["paypal", "mercado_pago"]:
+
+            raise cherrypy.HTTPError(400, "Invalid payment provider")
+
+        conn = LodgingReservationPayment().get_connection()
+
+        try:
+
+            conn.begin(conn)
+
+            reservation = LodgingReservation().where({"reservation_id": reservation_id}).one_or_none(conn=conn)
+
+            if not reservation:
+
+                raise cherrypy.HTTPError(404, "Reservation not found")
+
+            paid_payment = (
+                LodgingReservationPayment()
+                .where({"reservation_id": reservation_id}, {"status": "paid"})
+                .one_or_none(conn=conn)
+            )
+
+            if paid_payment:
+
+                raise cherrypy.HTTPError(409, "Reservation has already been paid")
+
+            charges = (
+                LodgingReservationCharge()
+                .where(
+                    {"reservation_id": reservation_id},
+                )
+                .all(conn=conn, collection=False)
+            )
+
+            if not charges:
+
+                raise cherrypy.HTTPError(400, "Reservation has no charges")
+
+            amount = sum(float(charge.get("total", 0) or 0) for charge in charges)
+
+            if amount <= 0:
+
+                raise cherrypy.HTTPError(400, "Reservation total must be greater than zero")
+
+            payment = LodgingReservationPayment()
+
+            payment.set_attrs(
+                {
+                    "payment_id": str(uuid.uuid4()),
+                    "reservation_id": reservation_id,
+                    "provider": provider,
+                    "amount": amount,
+                    "currency": "MXN",
+                    "status": "pending",
+                }
+            )
+
+            payment.insert(conn=conn)
+
+            conn.commit(conn)
+
+            return payment.as_dict()
+
+        except Exception:
+
+            conn.rollback(conn)
+
+            raise
