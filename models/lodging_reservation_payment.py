@@ -3,7 +3,7 @@ from .base import Model
 
 class LodgingReservationPayment(Model):
 
-    _TABLE = "lodging_reservation_payments"
+    _TABLE = "lodgings_reservations_payments"
 
     _IDS = [
         "payment_id",
@@ -44,6 +44,8 @@ class LodgingReservationPayment(Model):
 
     updated_at = Model.field("updated_at", None)
 
-    def __repr__(self):
+    def get_attrs(self):
+        return super().get_attrs(LodgingReservationPayment)
 
-        return "<LodgingReservationPayment %s>" % (self.payment_id)
+    def __repr__(self):
+        return f"LodgingReservationPayment('{self.payment_id}')"

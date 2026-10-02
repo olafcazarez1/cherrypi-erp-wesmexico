@@ -111,7 +111,7 @@ CREATE TABLE `lodgings_reservations` (
     `first_name` VARCHAR(120) NOT NULL DEFAULT '',
     `last_name` VARCHAR(120) NOT NULL DEFAULT '',
     `email` VARCHAR(255) NOT NULL DEFAULT '',
-    `phone` VARCHAR(50) NOT NULL DEFAULT '';
+    `phone` VARCHAR(50) NOT NULL DEFAULT '',
 
     `check_in` DATE NOT NULL,
     `check_out` DATE NOT NULL,
@@ -132,6 +132,8 @@ CREATE TABLE `lodgings_reservations` (
         'cancelled',
     'completed'
     ) NOT NULL DEFAULT 'confirmed',
+
+    `expires_at` DATETIME NULL,
 
     `created_at` TIMESTAMP NOT NULL DEFAULT '1990-01-01 00:00:00',
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -192,7 +194,7 @@ CREATE TABLE `lodgings_reservations_charges` (
         REFERENCES `lodgings_reservations` (`reservation_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE lodging_reservation_payments (
+CREATE TABLE lodgings_reservations_payments (
     payment_id CHAR(36) NOT NULL,
 
     reservation_id CHAR(36) NOT NULL,
@@ -227,27 +229,27 @@ CREATE TABLE lodging_reservation_payments (
         payment_id
     ),
 
-    KEY idx_lodging_reservation_payments_reservation (
+    KEY idx_lodgings_reservations_payments_reservation (
         reservation_id
     ),
 
-    KEY idx_lodging_reservation_payments_provider_reference (
+    KEY idx_lodgings_reservations_payments_provider_reference (
         provider_reference
     ),
 
-    KEY idx_lodging_reservation_payments_provider_payment (
+    KEY idx_lodgings_reservations_payments_provider_payment (
         provider_payment_id
     ),
 
-    CONSTRAINT fk_lodging_reservation_payments_reservation
+    CONSTRAINT fk_lodgings_reservations_payments_reservation
         FOREIGN KEY (
             reservation_id
         )
-        REFERENCES lodging_reservations (
+        REFERENCES lodgings_reservations (
             reservation_id
         )
         ON DELETE RESTRICT
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO `lodgings_amenities`
 (

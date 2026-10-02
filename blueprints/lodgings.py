@@ -6,10 +6,10 @@ import pymysql
 from helpers.helper_locality import HelperLocality
 
 from utils.decorators import tools
-from utils.query import _OR, Query
+from utils.query import _OR, _AND, Query
 from utils.utils import Utils
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from models.serie import Serie
 
 from models.document import Document
@@ -104,6 +104,14 @@ class MapLodgings(object):
         )
 
         mapper.connect(
+            "patch_lodging_reservation",
+            "/lodging-reservation/{reservation_id}",
+            controller=self,
+            action="patch_lodging_reservation",
+            conditions=dict(method=["PATCH", "OPTIONS"]),
+        )
+
+        mapper.connect(
             "get_lodging_reservation",
             "/lodging-reservation/{reservation_id}",
             controller=self,
@@ -115,31 +123,31 @@ class MapLodgings(object):
             "create_lodging_reservation_payment",
             "/lodging-reservation/{reservation_id}/payment",
             controller=self,
-            action="create_reservation_payment",
-            conditions=dict(method=["GET", "OPTIONS"]),
+            action="create_lodging_reservation_payment",
+            conditions=dict(method=["POST", "OPTIONS"]),
         )
 
         mapper.connect(
             "get_lodging_reservation_payments",
             "/lodging-reservation/{reservation_id}/payments",
             controller=self,
-            action="get_reservation_payments",
+            action="get_lodging_reservation_payments",
             conditions=dict(method=["GET", "OPTIONS"]),
         )
 
         mapper.connect(
             "get_lodging_reservation_payment",
-            "/lodging-reservation-payment/{payment_id}",
+            "/lodging-reservation/{reservation_id}/payment/{payment_id}",
             controller=self,
-            action="get_reservation_payment",
+            action="get_lodging_reservation_payment",
             conditions=dict(method=["GET", "OPTIONS"]),
         )
 
         mapper.connect(
-            "update_lodging_reservation_payment",
-            "/lodging-reservation-payment/{payment_id}",
+            "patch_lodging_reservation_payment",
+            "/lodging-reservation/{reservation_id}/payment/{payment_id}",
             controller=self,
-            action="update_reservation_payment",
+            action="patch_lodging_reservation_payment",
             conditions=dict(method=["PATCH", "OPTIONS"]),
         )
 
@@ -588,9 +596,16 @@ class MapLodgings(object):
                         ]
                     )
                     .where(
-                        {
-                            "status": "confirmed",
-                        },
+                        _OR(
+                            {"status": "confirmed"},
+                            _AND(
+                                {"status": "pending_payment"},
+                                {
+                                    "expires_at": datetime.utcnow(),
+                                    "op": "gt",
+                                },
+                            ),
+                        ),
                         {
                             "check_in": check_out,
                             "op": "lt",
@@ -852,6 +867,10 @@ class MapLodgings(object):
             # Availability
             # -------------------------------------------------------------
 
+            #
+            # Confirmed reservations always block.
+            #
+
             existing = (
                 LodgingReservation()
                 .where(
@@ -859,11 +878,7 @@ class MapLodgings(object):
                         "lodging_id": lodging_id,
                     },
                     {
-                        "status": [
-                            "pending_payment",
-                            "confirmed",
-                        ],
-                        "op": "in",
+                        "status": "confirmed",
                     },
                     {
                         "check_in": check_out,
@@ -878,6 +893,40 @@ class MapLodgings(object):
                     conn=conn,
                 )
             )
+
+            #
+            # Pending payment reservations only block
+            # while the hold is active.
+            #
+
+            if existing is None:
+
+                existing = (
+                    LodgingReservation()
+                    .where(
+                        {
+                            "lodging_id": lodging_id,
+                        },
+                        {
+                            "status": "pending_payment",
+                        },
+                        {
+                            "expires_at": datetime.utcnow(),
+                            "op": "gt",
+                        },
+                        {
+                            "check_in": check_out,
+                            "op": "lt",
+                        },
+                        {
+                            "check_out": check_in,
+                            "op": "gt",
+                        },
+                    )
+                    .one_or_none(
+                        conn=conn,
+                    )
+                )
 
             if existing:
 
@@ -914,6 +963,7 @@ class MapLodgings(object):
                     "email": data["email"],
                     "phone": data["phone"],
                     "status": "pending_payment",
+                    "expires_at": (datetime.utcnow() + timedelta(minutes=15)),
                 }
             )
 
@@ -990,6 +1040,7 @@ class MapLodgings(object):
 
         response = reservation.as_dict()
 
+        response["lodging"] = Lodging().where({"lodging_id": reservation.lodging_id}).one_or_none(conn=conn).as_dict()
         response["charges"] = charges
 
         return response
@@ -1007,77 +1058,344 @@ class MapLodgings(object):
             "provider",
         ]
     )
-    def create_reservation_payment(self, reservation_id, **kwargs):
+    def create_lodging_reservation_payment(self, reservation_id, **kwargs):
 
         body = cherrypy.request.json
 
-        provider = body.get("provider")
+        provider = body.get("provider", "")
 
-        if provider not in ["paypal", "mercado_pago"]:
+        if provider not in [
+            "paypal",
+            "mercado_pago",
+        ]:
 
-            raise cherrypy.HTTPError(400, "Invalid payment provider")
+            raise cherrypy.HTTPError(
+                400,
+                "Invalid payment provider",
+            )
 
-        conn = LodgingReservationPayment().get_connection()
-
+        conn = LodgingReservation().get_connection()
         try:
 
-            conn.begin(conn)
+            #
+            # Reservation
+            #
 
-            reservation = LodgingReservation().where({"reservation_id": reservation_id}).one_or_none(conn=conn)
+            reservation = (
+                LodgingReservation()
+                .where(
+                    {
+                        "reservation_id": reservation_id,
+                    }
+                )
+                .one_or_none(
+                    conn=conn,
+                )
+            )
 
             if not reservation:
 
-                raise cherrypy.HTTPError(404, "Reservation not found")
+                raise cherrypy.HTTPError(
+                    404,
+                    "Reservation not found",
+                )
+
+            #
+            # Only pending reservations can
+            # create new payment attempts.
+            #
+
+            if reservation.status != "pending_payment":
+
+                raise cherrypy.HTTPError(
+                    409,
+                    "Reservation is not pending payment",
+                )
+
+            #
+            # Validate expiration.
+            #
+
+            now = datetime.utcnow()
+
+            if reservation.expires_at and reservation.expires_at <= now:
+
+                raise cherrypy.HTTPError(
+                    409,
+                    "Reservation has expired",
+                )
+
+            #
+            # Check if reservation was already paid.
+            #
+
+            print("Checking for existing paid payment for reservation_id:", reservation_id)
 
             paid_payment = (
                 LodgingReservationPayment()
-                .where({"reservation_id": reservation_id}, {"status": "paid"})
-                .one_or_none(conn=conn)
+                .where(
+                    {
+                        "reservation_id": reservation_id,
+                    },
+                    {
+                        "status": "paid",
+                    },
+                )
+                .one_or_none(
+                    conn=conn,
+                )
             )
+
+            print("Existing paid payment:", paid_payment)
 
             if paid_payment:
 
-                raise cherrypy.HTTPError(409, "Reservation has already been paid")
+                raise cherrypy.HTTPError(
+                    409,
+                    "Reservation is already paid",
+                )
+
+            #
+            # Calculate amount from persisted charges.
+            #
+            # Never trust an amount coming from
+            # the browser.
+            #
 
             charges = (
                 LodgingReservationCharge()
                 .where(
-                    {"reservation_id": reservation_id},
+                    {
+                        "reservation_id": reservation_id,
+                    }
                 )
-                .all(conn=conn, collection=False)
+                .all(
+                    collection=False,
+                    conn=conn,
+                    ignore_limit=True,
+                )
             )
-
-            if not charges:
-
-                raise cherrypy.HTTPError(400, "Reservation has no charges")
 
             amount = sum(float(charge.get("total", 0) or 0) for charge in charges)
 
             if amount <= 0:
 
-                raise cherrypy.HTTPError(400, "Reservation total must be greater than zero")
+                raise cherrypy.HTTPError(
+                    409,
+                    "Reservation has no payable charges",
+                )
+
+            #
+            # Create payment attempt.
+            #
 
             payment = LodgingReservationPayment()
 
-            payment.set_attrs(
-                {
-                    "payment_id": str(uuid.uuid4()),
-                    "reservation_id": reservation_id,
-                    "provider": provider,
-                    "amount": amount,
-                    "currency": "MXN",
-                    "status": "pending",
-                }
+            payment.payment_id = str(uuid.uuid4())
+            payment.reservation_id = reservation_id
+            payment.provider = provider
+            payment.provider_reference = ""
+            payment.provider_payment_id = ""
+            payment.amount = amount
+            payment.currency = reservation.currency
+            payment.status = "pending"
+            payment.created_at = datetime.utcnow()
+            payment.updated_at = datetime.utcnow()
+
+            payment.insert(
+                conn=conn,
             )
-
-            payment.insert(conn=conn)
-
-            conn.commit(conn)
-
             return payment.as_dict()
 
-        except Exception:
+        except pymysql.err.IntegrityError as error:
 
             conn.rollback(conn)
 
-            raise
+            raise cherrypy.HTTPError(409, str(error))
+
+        except cherrypy.HTTPError as error:
+
+            conn.rollback(conn)
+
+            raise error
+
+        except Exception as error:
+
+            conn.rollback(conn)
+
+            raise cherrypy.HTTPError(500, str(error))
+
+        finally:
+            pass
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    @tools.validate_body_params(
+        [
+            "status",
+        ]
+    )
+    def patch_lodging_reservation(self, reservation_id, **kwargs):
+
+        body = cherrypy.request.json
+
+        allowed = [
+            "status",
+        ]
+
+        for key in list(body.keys()):
+            if key not in allowed:
+                body.pop(key)
+
+        conn = LodgingReservation().get_connection()
+
+        reservation = (
+            LodgingReservation()
+            .where(
+                {
+                    "reservation_id": reservation_id,
+                }
+            )
+            .one_or_none(
+                conn=conn,
+            )
+        )
+
+        if not reservation:
+
+            raise cherrypy.HTTPError(
+                404,
+                "Reservation not found",
+            )
+
+        reservation.set_attrs(body)
+        reservation.updated_at = datetime.utcnow()
+
+        reservation.update(conn=conn)
+
+        return reservation.as_dict()
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @tools.secured()
+    def get_lodging_reservation_payments(self, reservation_id, **kwargs):
+
+        result = {
+            "results": [],
+            "total_rows": 0,
+        }
+
+        conn = LodgingReservation().get_connection()
+        reservation = (
+            LodgingReservation()
+            .where(
+                {
+                    "reservation_id": reservation_id,
+                }
+            )
+            .one_or_none(
+                conn=conn,
+            )
+        )
+
+        if not reservation:
+
+            raise cherrypy.HTTPError(
+                404,
+                "Reservation not found",
+            )
+
+        payments = (
+            LodgingReservationPayment()
+            .where(
+                {
+                    "reservation_id": reservation_id,
+                }
+            )
+            .all(
+                collection=False,
+                conn=conn,
+                ignore_limit=True,
+            )
+        )
+
+        result["results"] = payments
+        result["total_rows"] = len(payments)
+        return result
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @tools.secured()
+    def get_lodging_reservation_payment(self, reservation_id, payment_id, **kwargs):
+
+        conn = LodgingReservationPayment().get_connection()
+
+        payment = (
+            LodgingReservationPayment()
+            .where(
+                {
+                    "reservation_id": reservation_id,
+                    "payment_id": payment_id,
+                }
+            )
+            .one_or_none(
+                conn=conn,
+            )
+        )
+
+        if not payment:
+
+            raise cherrypy.HTTPError(
+                404,
+                "Payment not found",
+            )
+
+        return payment.as_dict()
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    def patch_lodging_reservation_payment(self, reservation_id, payment_id, **kwargs):
+        allowed = [
+            "provider_reference",
+            "provider_payment_id",
+            "status",
+        ]
+
+        body = cherrypy.request.json
+
+        conn = LodgingReservationPayment().get_connection()
+
+        payment = (
+            LodgingReservationPayment()
+            .where(
+                {
+                    "reservation_id": reservation_id,
+                    "payment_id": payment_id,
+                }
+            )
+            .one_or_none(
+                conn=conn,
+            )
+        )
+
+        if not payment:
+
+            raise cherrypy.HTTPError(
+                404,
+                "Payment not found",
+            )
+
+        for key in list(body.keys()):
+            if key not in allowed:
+                body.pop(key)
+
+        payment.set_attrs(body)
+        payment.updated_at = datetime.utcnow()
+
+        payment.update(conn=conn)
+
+        return payment.as_dict()

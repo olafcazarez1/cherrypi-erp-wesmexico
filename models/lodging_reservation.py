@@ -56,6 +56,8 @@ class LodgingReservation(Model):
 
     status = Model.field("status", "confirmed")
 
+    expires_at = Model.field("expires_at")
+
     created_at = Model.field("created_at")
     updated_at = Model.field("updated_at")
 
