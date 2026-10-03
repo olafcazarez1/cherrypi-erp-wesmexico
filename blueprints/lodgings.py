@@ -1754,6 +1754,8 @@ class MapLodgings(object):
                     ),
                     "status": "confirmed",
                     "expires_at": None,
+                    "created_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow(),
                 }
             )
 
