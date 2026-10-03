@@ -112,6 +112,22 @@ class MapLodgings(object):
         )
 
         mapper.connect(
+            "create_manual_lodging_reservation",
+            "/lodging-reservation/manual",
+            controller=self,
+            action="create_manual_lodging_reservation",
+            conditions=dict(method=["POST", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "get_lodging_reservations",
+            "/lodging-reservations",
+            controller=self,
+            action="get_lodging_reservations",
+            conditions=dict(method=["GET", "OPTIONS"]),
+        )
+
+        mapper.connect(
             "get_lodging_reservation",
             "/lodging-reservation/{reservation_id}",
             controller=self,
@@ -1026,6 +1042,224 @@ class MapLodgings(object):
     @tools.cors
     @cherrypy.tools.json_out()
     @tools.secured()
+    def get_lodging_reservations(self, **kwargs):
+
+        result = {
+            "results": [],
+            "total_rows": 0,
+        }
+
+        offset = int(
+            kwargs.get(
+                "offset",
+                0,
+            )
+        )
+
+        limit = int(
+            kwargs.get(
+                "limit",
+                50,
+            )
+        )
+
+        look_for = str(
+            kwargs.get(
+                "look_for",
+                "",
+            )
+            or ""
+        ).strip()
+
+        start_date = str(
+            kwargs.get(
+                "start_date",
+                "",
+            )
+            or ""
+        ).strip()
+
+        end_date = str(
+            kwargs.get(
+                "end_date",
+                "",
+            )
+            or ""
+        ).strip()
+
+        filters = kwargs.get(
+            "filters",
+            "[]",
+        )
+
+        criterias = []
+
+        # ---------------------------------------------------------------------
+        # Search
+        # ---------------------------------------------------------------------
+
+        if look_for:
+
+            criterias.append(
+                _OR(
+                    {
+                        "code": look_for,
+                        "op": "like",
+                    },
+                    {
+                        "first_name": look_for,
+                        "op": "like",
+                    },
+                    {
+                        "last_name": look_for,
+                        "op": "like",
+                    },
+                    {
+                        "email": look_for,
+                        "op": "like",
+                    },
+                    {
+                        "phone": look_for,
+                        "op": "like",
+                    },
+                )
+            )
+
+        # ---------------------------------------------------------------------
+        # Stay date range
+        #
+        # Reservation overlaps requested range:
+        #
+        # reservation.check_in < end_date
+        # reservation.check_out > start_date
+        # ---------------------------------------------------------------------
+
+        if start_date and end_date:
+
+            criterias += [
+                {
+                    "check_in": end_date,
+                    "op": "lt",
+                },
+                {
+                    "check_out": start_date,
+                    "op": "gt",
+                },
+            ]
+
+        elif start_date:
+
+            criterias.append(
+                {
+                    "check_out": start_date,
+                    "op": "gte",
+                }
+            )
+
+        elif end_date:
+
+            criterias.append(
+                {
+                    "check_in": end_date,
+                    "op": "lte",
+                }
+            )
+
+        # ---------------------------------------------------------------------
+        # Filters
+        # ---------------------------------------------------------------------
+
+        criterias += Utils().convert_filters(
+            filters,
+            force_status=False,
+        )
+
+        # ---------------------------------------------------------------------
+        # Query
+        # ---------------------------------------------------------------------
+
+        query = Query(model=LodgingReservation())
+
+        query.where(*criterias)
+
+        query.limit(limit)
+
+        query.offset(offset)
+
+        query.order_by(
+            [
+                "-created_at",
+            ]
+        )
+
+        conn = LodgingReservation().get_connection()
+
+        reservations = query.all(
+            collection=False,
+            conn=conn,
+        )
+
+        result["total_rows"] = query.count(conn=conn)
+
+        # ---------------------------------------------------------------------
+        # Additional information
+        # ---------------------------------------------------------------------
+
+        for reservation in reservations:
+
+            lodging = Lodging().where({"lodging_id": reservation["lodging_id"]}).one_or_none(conn=conn)
+
+            reservation["lodging"] = lodging.as_dict() if lodging else None
+
+            charges = (
+                LodgingReservationCharge()
+                .where({"reservation_id": reservation["reservation_id"]})
+                .all(
+                    collection=False,
+                    conn=conn,
+                    ignore_limit=True,
+                )
+            )
+
+            reservation["total"] = sum(
+                float(
+                    charge.get(
+                        "total",
+                        0,
+                    )
+                    or 0
+                )
+                for charge in charges
+            )
+
+            reservation["guest_name"] = (
+                "{} {}".format(
+                    reservation.get(
+                        "first_name",
+                        "",
+                    ),
+                    reservation.get(
+                        "last_name",
+                        "",
+                    ),
+                )
+            ).strip()
+
+            reservation["lodging_name"] = lodging.name if lodging else ""
+
+        result["results"] = reservations
+
+        if not reservations:
+
+            cherrypy.response.status = "204 No Content"
+
+            return {}
+
+        return result
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @tools.secured()
     def get_lodging_reservation(self, reservation_id, **kwargs):
 
         conn = LodgingReservation().get_connection()
@@ -1276,6 +1510,355 @@ class MapLodgings(object):
         reservation.update(conn=conn)
 
         return reservation.as_dict()
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    @tools.validate_body_params(
+        [
+            "lodging_id",
+            "check_in",
+            "check_out",
+            "adults",
+            "children",
+            "first_name",
+            "last_name",
+            "payment_type",
+        ]
+    )
+    def create_manual_lodging_reservation(self, **kwargs):
+
+        data = cherrypy.request.json
+
+        lodging_id = data.get("lodging_id")
+
+        payment_type = data.get(
+            "payment_type",
+            "",
+        )
+
+        if payment_type not in [
+            "transfer",
+            "courtesy",
+        ]:
+
+            raise cherrypy.HTTPError(
+                400,
+                "Invalid payment type",
+            )
+
+        try:
+
+            check_in = datetime.strptime(
+                data.get("check_in"),
+                "%Y-%m-%d",
+            )
+
+            check_out = datetime.strptime(
+                data.get("check_out"),
+                "%Y-%m-%d",
+            )
+
+        except Exception:
+
+            raise cherrypy.HTTPError(
+                400,
+                "Invalid reservation dates",
+            )
+
+        if check_out <= check_in:
+
+            raise cherrypy.HTTPError(
+                400,
+                "check_out must be after check_in",
+            )
+
+        adults = int(
+            data.get(
+                "adults",
+                0,
+            )
+            or 0
+        )
+
+        children = int(
+            data.get(
+                "children",
+                0,
+            )
+            or 0
+        )
+
+        guests = adults + children
+
+        if adults < 1:
+
+            raise cherrypy.HTTPError(
+                400,
+                "At least one adult is required",
+            )
+
+        nights = (check_out - check_in).days
+
+        conn = LodgingReservation().get_connection()
+
+        try:
+
+            # -------------------------------------------------------------
+            # Lodging
+            # -------------------------------------------------------------
+
+            lodging = (
+                Lodging()
+                .where(
+                    {
+                        "lodging_id": lodging_id,
+                    },
+                    {
+                        "status": "active",
+                    },
+                )
+                .one_or_none(
+                    conn=conn,
+                )
+            )
+
+            if not lodging:
+
+                raise cherrypy.HTTPError(
+                    404,
+                    "Lodging not found",
+                )
+
+            if guests > int(lodging.max_occupancy or 0):
+
+                raise cherrypy.HTTPError(
+                    400,
+                    "guests exceeds max occupancy",
+                )
+
+            # -------------------------------------------------------------
+            # Availability
+            #
+            # We MUST check again here.
+            # The availability search in the modal is not enough because
+            # another reservation may have been created afterwards.
+            # -------------------------------------------------------------
+
+            existing = (
+                LodgingReservation()
+                .where(
+                    {
+                        "lodging_id": lodging_id,
+                    },
+                    {
+                        "status": "confirmed",
+                    },
+                    {
+                        "check_in": check_out,
+                        "op": "lt",
+                    },
+                    {
+                        "check_out": check_in,
+                        "op": "gt",
+                    },
+                )
+                .one_or_none(
+                    conn=conn,
+                )
+            )
+
+            if existing is None:
+
+                existing = (
+                    LodgingReservation()
+                    .where(
+                        {
+                            "lodging_id": lodging_id,
+                        },
+                        {
+                            "status": "pending_payment",
+                        },
+                        {
+                            "expires_at": datetime.utcnow(),
+                            "op": "gt",
+                        },
+                        {
+                            "check_in": check_out,
+                            "op": "lt",
+                        },
+                        {
+                            "check_out": check_in,
+                            "op": "gt",
+                        },
+                    )
+                    .one_or_none(
+                        conn=conn,
+                    )
+                )
+
+            if existing:
+
+                raise cherrypy.HTTPError(
+                    409,
+                    "Lodging is not available for the selected dates",
+                )
+
+            # -------------------------------------------------------------
+            # Reservation
+            # -------------------------------------------------------------
+
+            code = Serie.generate(
+                reference="general",
+                key="lodging_reservation",
+                prefix="RSV-",
+                conn=conn,
+            )
+
+            reservation_id = str(uuid.uuid4())
+
+            reservation = LodgingReservation()
+
+            reservation.set_attrs(
+                {
+                    "reservation_id": reservation_id,
+                    "lodging_id": lodging_id,
+                    "code": code,
+                    "check_in": check_in,
+                    "check_out": check_out,
+                    "adults": adults,
+                    "children": children,
+                    "guests": guests,
+                    "nights": nights,
+                    "first_name": data.get(
+                        "first_name",
+                        "",
+                    ),
+                    "last_name": data.get(
+                        "last_name",
+                        "",
+                    ),
+                    "email": data.get(
+                        "email",
+                        "",
+                    ),
+                    "phone": data.get(
+                        "phone",
+                        "",
+                    ),
+                    "currency": lodging.currency,
+                    "observations": data.get(
+                        "observations",
+                        "",
+                    ),
+                    "status": "confirmed",
+                    "expires_at": None,
+                }
+            )
+
+            reservation.insert(
+                conn=conn,
+            )
+
+            # -------------------------------------------------------------
+            # Charge
+            # -------------------------------------------------------------
+
+            unit_price = float(lodging.price_per_night or 0)
+
+            if payment_type == "courtesy":
+
+                unit_price = 0
+
+            subtotal = unit_price * nights
+
+            charge = LodgingReservationCharge()
+
+            charge.set_attrs(
+                {
+                    "charge_id": str(uuid.uuid4()),
+                    "reservation_id": reservation_id,
+                    "type": "lodging",
+                    "name": ("Hospedaje / Cortesía" if payment_type == "courtesy" else "Hospedaje"),
+                    "description": "%s noche(s)" % nights,
+                    "quantity": nights,
+                    "unit_price": unit_price,
+                    "subtotal": subtotal,
+                    "taxes": 0,
+                    "total": subtotal,
+                    "currency": lodging.currency,
+                    "status": "active",
+                }
+            )
+
+            charge.insert(
+                conn=conn,
+            )
+
+            # -------------------------------------------------------------
+            # Payment
+            # -------------------------------------------------------------
+
+            payment = LodgingReservationPayment()
+
+            payment.set_attrs(
+                {
+                    "payment_id": str(uuid.uuid4()),
+                    "reservation_id": reservation_id,
+                    "provider": payment_type,
+                    "provider_reference": "",
+                    "provider_payment_id": "",
+                    "amount": subtotal,
+                    "currency": lodging.currency,
+                    "status": "paid",
+                }
+            )
+
+            payment.insert(
+                conn=conn,
+            )
+
+            # -------------------------------------------------------------
+            # Commit
+            # -------------------------------------------------------------
+
+            conn.commit(conn)
+
+            return {
+                "reservation_id": reservation_id,
+                "code": code,
+                "status": "confirmed",
+                "payment_type": payment_type,
+                "nights": nights,
+                "total": subtotal,
+                "charge": charge.as_dict(),
+                "payment": payment.as_dict(),
+            }
+
+        except pymysql.err.IntegrityError as error:
+
+            conn.rollback(conn)
+
+            raise cherrypy.HTTPError(
+                409,
+                str(error),
+            )
+
+        except cherrypy.HTTPError as error:
+
+            conn.rollback(conn)
+
+            raise error
+
+        except Exception as error:
+
+            conn.rollback(conn)
+
+            raise cherrypy.HTTPError(
+                500,
+                str(error),
+            )
 
     @tools.cors
     @cherrypy.tools.json_out()

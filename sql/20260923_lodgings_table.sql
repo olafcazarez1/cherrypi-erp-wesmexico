@@ -201,7 +201,9 @@ CREATE TABLE lodgings_reservations_payments (
 
     provider ENUM(
         'paypal',
-        'mercado_pago'
+        'mercado_pago',
+        'transfer',
+        'courtesy'
     ) NOT NULL,
 
     provider_reference VARCHAR(255) DEFAULT NULL,
