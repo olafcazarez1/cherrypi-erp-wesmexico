@@ -1577,6 +1577,7 @@ CREATE TABLE `lodgings_amenities_assignments` (
 CREATE TABLE `lodgings_reservations` (
     `reservation_id` CHAR(36) NOT NULL,
     `lodging_id` CHAR(36) NOT NULL,
+    `reservation_session_id` CHAR(36) NULL,
 
     `code` CHAR(32) NOT NULL,
 

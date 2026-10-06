@@ -273,3 +273,12 @@ VALUES
 (UUID(), 'coffee_maker', 'Cafetera'),
 (UUID(), 'workspace', 'Espacio de trabajo'),
 (UUID(), 'pet_friendly', 'Mascotas permitidas');
+
+
+
+ALTER TABLE lodgings_reservations
+ADD COLUMN reservation_session_id CHAR(36) NULL
+AFTER reservation_id;
+
+CREATE UNIQUE INDEX uq_lodgings_reservations_reservation_session
+ON lodgings_reservations (reservation_session_id);

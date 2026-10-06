@@ -32,6 +32,7 @@ class LodgingReservation(Model):
 
     reservation_id = Model.field("reservation_id")
     lodging_id = Model.field("lodging_id")
+    reservation_session_id = Model.field("reservation_session_id", None)
 
     code = Model.field("code", "")
 

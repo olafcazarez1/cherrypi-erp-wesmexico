@@ -789,6 +789,21 @@ class MapLodgings(object):
     )
     def create_lodging_reservation(self, **kwargs):
 
+        reservation_session_id = str(
+            cherrypy.request.headers.get(
+                "X-Reservation-Session-Id",
+                "",
+            )
+            or ""
+        ).strip()
+
+        if not reservation_session_id:
+
+            raise cherrypy.HTTPError(
+                400,
+                "X-Reservation-Session-Id is required",
+            )
+
         data = cherrypy.request.json
 
         lodging_id = data["lodging_id"]
@@ -872,20 +887,18 @@ class MapLodgings(object):
                     "guests must be greater than zero",
                 )
 
-            if guests > int(lodging.max_occupancy) or 0:
+            if guests > int(lodging.max_occupancy or 0):
 
                 raise cherrypy.HTTPError(
                     400,
                     "guests exceeds max occupancy",
                 )
 
-            # -------------------------------------------------------------
-            # Availability
-            # -------------------------------------------------------------
+            now = datetime.utcnow()
 
-            #
-            # Confirmed reservations always block.
-            #
+            # -------------------------------------------------------------
+            # Check confirmed reservation from any session
+            # -------------------------------------------------------------
 
             existing = (
                 LodgingReservation()
@@ -910,49 +923,116 @@ class MapLodgings(object):
                 )
             )
 
-            #
-            # Pending payment reservations only block
-            # while the hold is active.
-            #
+            if existing:
 
-            if existing is None:
-
-                existing = (
-                    LodgingReservation()
-                    .where(
-                        {
-                            "lodging_id": lodging_id,
-                        },
-                        {
-                            "status": "pending_payment",
-                        },
-                        {
-                            "expires_at": datetime.utcnow(),
-                            "op": "gt",
-                        },
-                        {
-                            "check_in": check_out,
-                            "op": "lt",
-                        },
-                        {
-                            "check_out": check_in,
-                            "op": "gt",
-                        },
-                    )
-                    .one_or_none(
-                        conn=conn,
-                    )
+                raise cherrypy.HTTPError(
+                    423,
+                    "Lodging is no longer available for the selected dates",
                 )
+
+            # -------------------------------------------------------------
+            # Check active pending reservation from OTHER session
+            # -------------------------------------------------------------
+
+            existing = (
+                LodgingReservation()
+                .where(
+                    {
+                        "lodging_id": lodging_id,
+                    },
+                    {
+                        "status": "pending_payment",
+                    },
+                    {
+                        "reservation_session_id": reservation_session_id,
+                        "op": "neq",
+                    },
+                    {
+                        "expires_at": now,
+                        "op": "gt",
+                    },
+                    {
+                        "check_in": check_out,
+                        "op": "lt",
+                    },
+                    {
+                        "check_out": check_in,
+                        "op": "gt",
+                    },
+                )
+                .one_or_none(
+                    conn=conn,
+                )
+            )
 
             if existing:
 
                 raise cherrypy.HTTPError(
-                    409,
-                    "Lodging is not available for the selected dates",
+                    423,
+                    "Lodging is no longer available for the selected dates",
                 )
 
             # -------------------------------------------------------------
-            # Reservation
+            # Reuse reservation from CURRENT session
+            # -------------------------------------------------------------
+
+            session_reservation = (
+                LodgingReservation()
+                .where(
+                    {
+                        "reservation_session_id": reservation_session_id,
+                    }
+                )
+                .one_or_none(
+                    conn=conn,
+                )
+            )
+
+            if session_reservation:
+
+                #
+                # Defensive validation:
+                # same session must belong to same stay.
+                #
+
+                if (
+                    session_reservation.lodging_id != lodging_id
+                    or str(session_reservation.check_in) != check_in
+                    or str(session_reservation.check_out) != check_out
+                ):
+
+                    raise cherrypy.HTTPError(
+                        409,
+                        "Reservation session does not match the selected stay",
+                    )
+
+                #
+                # Reuse even if previous hold expired,
+                # because no other active reservation
+                # currently owns the dates.
+                #
+
+                session_reservation.status = "pending_payment"
+
+                session_reservation.expires_at = now + timedelta(minutes=30)
+
+                session_reservation.updated_at = now
+
+                session_reservation.update(
+                    conn=conn,
+                )
+
+                conn.commit(conn)
+
+                return {
+                    "reservation_id": session_reservation.reservation_id,
+                    "status": session_reservation.status,
+                    "expires_at": session_reservation.expires_at,
+                    "reused": True,
+                }
+
+            # -------------------------------------------------------------
+            # Create reservation
             # -------------------------------------------------------------
 
             data["code"] = Serie.generate(
@@ -969,6 +1049,7 @@ class MapLodgings(object):
             reservation.set_attrs(
                 {
                     "reservation_id": reservation_id,
+                    "reservation_session_id": reservation_session_id,
                     "lodging_id": lodging_id,
                     "code": data["code"],
                     "check_in": check_in,
@@ -979,7 +1060,7 @@ class MapLodgings(object):
                     "email": data["email"],
                     "phone": data["phone"],
                     "status": "pending_payment",
-                    "expires_at": (datetime.utcnow() + timedelta(minutes=15)),
+                    "expires_at": (now + timedelta(minutes=30)),
                 }
             )
 
@@ -1026,6 +1107,8 @@ class MapLodgings(object):
             return {
                 "reservation_id": reservation_id,
                 "status": "pending_payment",
+                "expires_at": reservation.expires_at,
+                "reused": False,
                 "nights": nights,
                 "charges": [
                     charge.as_dict(),
@@ -1033,11 +1116,35 @@ class MapLodgings(object):
                 "total": subtotal,
             }
 
-        except Exception:
+        except pymysql.err.IntegrityError as error:
+
+            print(error)
 
             conn.rollback(conn)
 
-            raise
+            raise cherrypy.HTTPError(
+                409,
+                str(error),
+            )
+
+        except cherrypy.HTTPError as error:
+
+            print(error)
+
+            conn.rollback(conn)
+
+            raise error
+
+        except Exception as error:
+
+            print(error)
+
+            conn.rollback(conn)
+
+            raise cherrypy.HTTPError(
+                500,
+                str(error),
+            )
 
     @tools.cors
     @cherrypy.tools.json_out()
