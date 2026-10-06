@@ -1118,8 +1118,6 @@ class MapLodgings(object):
 
         except pymysql.err.IntegrityError as error:
 
-            print(error)
-
             conn.rollback(conn)
 
             raise cherrypy.HTTPError(
@@ -1129,15 +1127,11 @@ class MapLodgings(object):
 
         except cherrypy.HTTPError as error:
 
-            print(error)
-
             conn.rollback(conn)
 
             raise error
 
         except Exception as error:
-
-            print(error)
 
             conn.rollback(conn)
 
@@ -1470,8 +1464,6 @@ class MapLodgings(object):
             # Check if reservation was already paid.
             #
 
-            print("Checking for existing paid payment for reservation_id:", reservation_id)
-
             paid_payment = (
                 LodgingReservationPayment()
                 .where(
@@ -1486,8 +1478,6 @@ class MapLodgings(object):
                     conn=conn,
                 )
             )
-
-            print("Existing paid payment:", paid_payment)
 
             if paid_payment:
 

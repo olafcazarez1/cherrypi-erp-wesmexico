@@ -194,7 +194,6 @@ class MapShoppingCart(object):
         token = kwargs.get("token")
 
         body = cherrypy.request.json
-        print(body)
 
         branch_id = body.get("branch_id")
         warehouse_id = body.get("warehouse_id")
