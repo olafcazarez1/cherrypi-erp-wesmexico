@@ -20,6 +20,8 @@ from models.lodging_reservation import LodgingReservation
 from models.lodging_reservation_charge import LodgingReservationCharge
 from models.lodging_reservation_payment import LodgingReservationPayment
 
+from helpers.notification import Notification
+
 
 class MapLodgings(object):
 
@@ -2036,6 +2038,52 @@ class MapLodgings(object):
 
         return payment.as_dict()
 
+    # @tools.cors
+    # @cherrypy.tools.json_out()
+    # @cherrypy.tools.json_in()
+    # @tools.secured()
+    # def patch_lodging_reservation_payment(self, reservation_id, payment_id, **kwargs):
+    #     allowed = [
+    #         "provider_reference",
+    #         "provider_payment_id",
+    #         "status",
+    #     ]
+
+    #     body = cherrypy.request.json
+
+    #     conn = LodgingReservationPayment().get_connection()
+
+    #     payment = (
+    #         LodgingReservationPayment()
+    #         .where(
+    #             {
+    #                 "reservation_id": reservation_id,
+    #                 "payment_id": payment_id,
+    #             }
+    #         )
+    #         .one_or_none(
+    #             conn=conn,
+    #         )
+    #     )
+
+    #     if not payment:
+
+    #         raise cherrypy.HTTPError(
+    #             404,
+    #             "Payment not found",
+    #         )
+
+    #     for key in list(body.keys()):
+    #         if key not in allowed:
+    #             body.pop(key)
+
+    #     payment.set_attrs(body)
+    #     payment.updated_at = datetime.utcnow()
+
+    #     payment.update(conn=conn)
+
+    #     return payment.as_dict()
+
     @tools.cors
     @cherrypy.tools.json_out()
     @cherrypy.tools.json_in()
@@ -2071,13 +2119,75 @@ class MapLodgings(object):
                 "Payment not found",
             )
 
+        previous_status = payment.status
+
         for key in list(body.keys()):
+
             if key not in allowed:
+
                 body.pop(key)
 
         payment.set_attrs(body)
+
         payment.updated_at = datetime.utcnow()
 
-        payment.update(conn=conn)
+        payment.update(
+            conn=conn,
+        )
+
+        #
+        # Reservation confirmation notification
+        #
+        # Only send when the payment changes
+        # from a non-paid state to paid.
+        #
+
+        became_paid = previous_status != "paid" and payment.status == "paid"
+
+        if became_paid:
+
+            try:
+
+                reservation = self.get_lodging_reservation(reservation_id)
+                charges = reservation.get("charges", [])
+                lodging = reservation.get("lodging", {})
+
+                total = sum(
+                    float(
+                        charge.get(
+                            "total",
+                            0,
+                        )
+                        or 0
+                    )
+                    for charge in charges
+                )
+
+                notification_data = {
+                    "reservation": reservation.as_dict(),
+                    "lodging": lodging.as_dict(),
+                    "payment": payment.as_dict(),
+                    "charges": charges,
+                    "total": total,
+                }
+
+                notification = Notification()
+
+                notification.send_lodging_reservation_confirmation(notification_data)
+
+            except Exception as error:
+
+                #
+                # Important:
+                #
+                # Payment was already confirmed.
+                # An email failure must NOT turn
+                # the payment request into a failure.
+                #
+
+                print(
+                    "Lodging reservation confirmation " "email failed:",
+                    error,
+                )
 
         return payment.as_dict()

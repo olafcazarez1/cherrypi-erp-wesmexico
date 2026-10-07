@@ -612,3 +612,180 @@ class Notification(object):
             cc=cc,
             bcc=bcc,
         )
+
+    def send_lodging_reservation_confirmation(
+        self,
+        data,
+    ):
+        file_path = "{base}/notification_templates/{template}".format(
+            base=os.path.dirname(os.path.abspath(__file__)),
+            template="lodging_reservation_confirmation.tpl.html",
+        )
+
+        with open(
+            file_path,
+            "r",
+            encoding="utf-8",
+        ) as file:
+            content = file.read()
+
+        reservation = data["reservation"]
+        lodging = data["lodging"]
+        payment = data["payment"]
+
+        total = float(
+            data.get(
+                "total",
+                0,
+            )
+            or 0
+        )
+
+        guest_name = "{} {}".format(
+            reservation.get(
+                "first_name",
+                "",
+            ),
+            reservation.get(
+                "last_name",
+                "",
+            ),
+        ).strip()
+
+        to = data.get(
+            "to",
+            [
+                reservation["email"],
+            ],
+        )
+
+        cc = data.get(
+            "cc",
+            [],
+        )
+
+        bcc = data.get(
+            "bcc",
+            [],
+        )
+
+        payment_reference = payment.get(
+            "provider_payment_id",
+            "",
+        ) or payment.get(
+            "provider_reference",
+            "",
+        )
+
+        replacements = {
+            "#guest_name#": html.escape(guest_name),
+            "#reservation_code#": html.escape(
+                str(
+                    reservation.get(
+                        "code",
+                        "",
+                    )
+                )
+            ),
+            "#lodging_name#": html.escape(
+                str(
+                    lodging.get(
+                        "name",
+                        "",
+                    )
+                )
+            ),
+            "#check_in#": html.escape(
+                str(
+                    reservation.get(
+                        "check_in",
+                        "",
+                    )
+                )
+            ),
+            "#check_out#": html.escape(
+                str(
+                    reservation.get(
+                        "check_out",
+                        "",
+                    )
+                )
+            ),
+            "#nights#": html.escape(
+                str(
+                    reservation.get(
+                        "nights",
+                        "",
+                    )
+                )
+            ),
+            "#guests#": html.escape(
+                str(
+                    reservation.get(
+                        "guests",
+                        "",
+                    )
+                )
+            ),
+            "#total#": "{:,.2f}".format(total),
+            "#currency#": html.escape(
+                str(
+                    reservation.get(
+                        "currency",
+                        "MXN",
+                    )
+                ).upper()
+            ),
+            "#payment_method#": html.escape(
+                str(
+                    payment.get(
+                        "provider",
+                        "",
+                    )
+                )
+                .replace(
+                    "_",
+                    " ",
+                )
+                .title()
+            ),
+            "#payment_reference#": html.escape(str(payment_reference)),
+            "#guest_email#": html.escape(
+                str(
+                    reservation.get(
+                        "email",
+                        "",
+                    )
+                )
+            ),
+            "#guest_phone#": html.escape(
+                str(
+                    reservation.get(
+                        "phone",
+                        "",
+                    )
+                )
+            ),
+        }
+
+        for key, value in replacements.items():
+
+            content = content.replace(
+                key,
+                value,
+            )
+
+        subject = ("Por La Baja - Reservación confirmada {}").format(
+            reservation.get(
+                "code",
+                "",
+            )
+        )
+
+        return self._send_html_message(
+            subject=subject,
+            content=content,
+            to=to,
+            cc=cc,
+            bcc=bcc,
+        )
