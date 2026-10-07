@@ -2149,6 +2149,7 @@ class MapLodgings(object):
             try:
 
                 reservation = self.get_lodging_reservation(reservation_id)
+                print(reservation)
                 charges = reservation.pop("charges", [])
                 lodging = reservation.pop("lodging", {})
 
