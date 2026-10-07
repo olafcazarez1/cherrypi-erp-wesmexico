@@ -2149,7 +2149,6 @@ class MapLodgings(object):
             try:
 
                 reservation = self.get_lodging_reservation(reservation_id)
-                print(reservation)
                 charges = reservation.pop("charges", [])
                 lodging = reservation.pop("lodging", {})
 
@@ -2167,7 +2166,7 @@ class MapLodgings(object):
                 notification_data = {
                     "reservation": reservation,
                     "lodging": lodging,
-                    "payment": payment,
+                    "payment": payment.as_dict(),
                     "charges": charges,
                     "total": total,
                 }
@@ -2175,6 +2174,18 @@ class MapLodgings(object):
                 notification = Notification()
 
                 notification.send_lodging_reservation_confirmation(notification_data)
+
+                notification.send_lodging_reservation_notification(
+                    {
+                        **notification_data,
+                        "to": [
+                            "juancarlos.valenzuela@wesmexico.com",
+                        ],
+                        "cc": [
+                            "olafcazarez@gmail.com",
+                        ],
+                    }
+                )
 
             except Exception as error:
 

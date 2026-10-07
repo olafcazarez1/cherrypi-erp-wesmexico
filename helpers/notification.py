@@ -789,3 +789,219 @@ class Notification(object):
             cc=cc,
             bcc=bcc,
         )
+
+    def send_lodging_reservation_notification(
+        self,
+        data,
+    ):
+        file_path = "{base}/notification_templates/{template}".format(
+            base=os.path.dirname(os.path.abspath(__file__)),
+            template="lodging_reservation_notification.tpl.html",
+        )
+
+        with open(
+            file_path,
+            "r",
+            encoding="utf-8",
+        ) as file:
+            content = file.read()
+
+        reservation = data["reservation"]
+        lodging = data["lodging"]
+        payment = data["payment"]
+        charges = data.get(
+            "charges",
+            [],
+        )
+
+        total = float(
+            data.get(
+                "total",
+                0,
+            )
+            or 0
+        )
+
+        to = data.get(
+            "to",
+            [],
+        )
+
+        cc = data.get(
+            "cc",
+            [],
+        )
+
+        bcc = data.get(
+            "bcc",
+            [],
+        )
+
+        if not to:
+
+            raise ValueError("Reservation notification recipients are required")
+
+        guest_name = "{} {}".format(
+            reservation.get(
+                "first_name",
+                "",
+            ),
+            reservation.get(
+                "last_name",
+                "",
+            ),
+        ).strip()
+
+        payment_reference = payment.get(
+            "provider_payment_id",
+            "",
+        ) or payment.get(
+            "provider_reference",
+            "",
+        )
+
+        replacements = {
+            "#reservation_code#": html.escape(
+                str(
+                    reservation.get(
+                        "code",
+                        "",
+                    )
+                )
+            ),
+            "#lodging_name#": html.escape(
+                str(
+                    lodging.get(
+                        "name",
+                        "",
+                    )
+                )
+            ),
+            "#lodging_code#": html.escape(
+                str(
+                    lodging.get(
+                        "code",
+                        "",
+                    )
+                )
+            ),
+            "#guest_name#": html.escape(guest_name),
+            "#guest_email#": html.escape(
+                str(
+                    reservation.get(
+                        "email",
+                        "",
+                    )
+                )
+            ),
+            "#guest_phone#": html.escape(
+                str(
+                    reservation.get(
+                        "phone",
+                        "",
+                    )
+                )
+            ),
+            "#check_in#": html.escape(
+                str(
+                    reservation.get(
+                        "check_in",
+                        "",
+                    )
+                )
+            ),
+            "#check_out#": html.escape(
+                str(
+                    reservation.get(
+                        "check_out",
+                        "",
+                    )
+                )
+            ),
+            "#nights#": html.escape(
+                str(
+                    reservation.get(
+                        "nights",
+                        "",
+                    )
+                )
+            ),
+            "#guests#": html.escape(
+                str(
+                    reservation.get(
+                        "guests",
+                        "",
+                    )
+                )
+            ),
+            "#adults#": html.escape(
+                str(
+                    reservation.get(
+                        "adults",
+                        "",
+                    )
+                )
+            ),
+            "#children#": html.escape(
+                str(
+                    reservation.get(
+                        "children",
+                        "",
+                    )
+                )
+            ),
+            "#total#": "{:,.2f}".format(total),
+            "#currency#": html.escape(
+                str(
+                    reservation.get(
+                        "currency",
+                        "MXN",
+                    )
+                ).upper()
+            ),
+            "#payment_method#": html.escape(
+                str(
+                    payment.get(
+                        "provider",
+                        "",
+                    )
+                )
+                .replace(
+                    "_",
+                    " ",
+                )
+                .title()
+            ),
+            "#payment_reference#": html.escape(str(payment_reference)),
+            "#observations#": html.escape(
+                str(
+                    reservation.get(
+                        "observations",
+                        "",
+                    )
+                    or ""
+                )
+            ),
+        }
+
+        for key, value in replacements.items():
+
+            content = content.replace(
+                key,
+                value,
+            )
+
+        subject = ("Por La Baja - Nueva reservación {}").format(
+            reservation.get(
+                "code",
+                "",
+            )
+        )
+
+        return self._send_html_message(
+            subject=subject,
+            content=content,
+            to=to,
+            cc=cc,
+            bcc=bcc,
+        )
