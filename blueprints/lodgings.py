@@ -2149,8 +2149,8 @@ class MapLodgings(object):
             try:
 
                 reservation = self.get_lodging_reservation(reservation_id)
-                charges = reservation.get("charges", [])
-                lodging = reservation.get("lodging", {})
+                charges = reservation.pop("charges", [])
+                lodging = reservation.pop("lodging", {})
 
                 total = sum(
                     float(
@@ -2164,9 +2164,9 @@ class MapLodgings(object):
                 )
 
                 notification_data = {
-                    "reservation": reservation.as_dict(),
-                    "lodging": lodging.as_dict(),
-                    "payment": payment.as_dict(),
+                    "reservation": reservation,
+                    "lodging": lodging,
+                    "payment": payment,
                     "charges": charges,
                     "total": total,
                 }
