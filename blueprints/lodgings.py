@@ -1,3 +1,4 @@
+import logging
 import uuid
 import json
 import cherrypy
@@ -19,6 +20,7 @@ from models.lodging_amenity_assignment import LodgingAmenityAssignment
 from models.lodging_reservation import LodgingReservation
 from models.lodging_reservation_charge import LodgingReservationCharge
 from models.lodging_reservation_payment import LodgingReservationPayment
+from models.lodging_reservation_payment_review import LodgingReservationPaymentReview
 
 from helpers.notification import Notification
 
@@ -167,6 +169,30 @@ class MapLodgings(object):
             controller=self,
             action="patch_lodging_reservation_payment",
             conditions=dict(method=["PATCH", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "create_lodging_reservation_payment_receipt",
+            "/lodging-reservation/{reservation_id}/payment/{payment_id}/receipt",
+            controller=self,
+            action="create_lodging_reservation_payment_receipt",
+            conditions=dict(method=["POST", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "get_lodging_reservation_payment_review",
+            "/lodging-reservation/payment-review/{review_id}",
+            controller=self,
+            action="get_lodging_reservation_payment_review",
+            conditions=dict(method=["GET", "OPTIONS"]),
+        )
+
+        mapper.connect(
+            "decide_lodging_reservation_payment_review",
+            "/lodging-reservation/payment-review/{review_id}/decision",
+            controller=self,
+            action="decide_lodging_reservation_payment_review",
+            conditions=dict(method=["POST", "OPTIONS"]),
         )
 
     # -------------------------------------------------------------------------
@@ -1404,8 +1430,9 @@ class MapLodgings(object):
         if provider not in [
             "paypal",
             "mercado_pago",
+            "transfer",
+            "courtesy",
         ]:
-
             raise cherrypy.HTTPError(
                 400,
                 "Invalid payment provider",
@@ -1517,6 +1544,21 @@ class MapLodgings(object):
                     409,
                     "Reservation has no payable charges",
                 )
+
+            if provider == "transfer":
+
+                existing_payment = (
+                    LodgingReservationPayment()
+                    .where(
+                        {"reservation_id": reservation_id},
+                        {"provider": "transfer"},
+                        {"status": "pending"},
+                    )
+                    .one_or_none(conn=conn)
+                )
+
+                if existing_payment:
+                    return existing_payment.as_dict()
 
             #
             # Create payment attempt.
@@ -2119,6 +2161,12 @@ class MapLodgings(object):
                 "Payment not found",
             )
 
+        if payment.provider == "transfer" and "status" in body:
+            raise cherrypy.HTTPError(
+                403,
+                "Transfer payment status requires manager approval",
+            )
+
         previous_status = payment.status
 
         for key in list(body.keys()):
@@ -2203,3 +2251,503 @@ class MapLodgings(object):
                 )
 
         return payment.as_dict()
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    @tools.validate_body_params(
+        [
+            "asset_id",
+            "url",
+        ]
+    )
+    def create_lodging_reservation_payment_receipt(self, reservation_id, payment_id, **kwargs):
+
+        body = cherrypy.request.json
+
+        asset_id = str(body.get("asset_id") or "").strip()
+
+        url = str(body.get("url") or "").strip()
+
+        if not asset_id or not url:
+            raise cherrypy.HTTPError(
+                400,
+                "Invalid receipt data",
+            )
+
+        conn = LodgingReservationPayment().get_connection()
+
+        try:
+
+            # -------------------------------------------------
+            # Reservation
+            # -------------------------------------------------
+
+            reservation = (
+                LodgingReservation()
+                .where(
+                    {
+                        "reservation_id": reservation_id,
+                    }
+                )
+                .one_or_none(conn=conn)
+            )
+
+            if not reservation:
+                raise cherrypy.HTTPError(
+                    404,
+                    "Reservation not found",
+                )
+
+            if reservation.status != "pending_payment":
+                raise cherrypy.HTTPError(
+                    409,
+                    "Reservation is not pending payment",
+                )
+
+            # -------------------------------------------------
+            # Payment
+            # -------------------------------------------------
+
+            payment = (
+                LodgingReservationPayment()
+                .where(
+                    {
+                        "reservation_id": reservation_id,
+                        "payment_id": payment_id,
+                    }
+                )
+                .one_or_none(conn=conn)
+            )
+
+            if not payment:
+                raise cherrypy.HTTPError(
+                    404,
+                    "Payment not found",
+                )
+
+            if payment.provider != "transfer":
+                raise cherrypy.HTTPError(
+                    400,
+                    "Payment provider must be transfer",
+                )
+
+            if payment.status != "pending":
+                raise cherrypy.HTTPError(
+                    409,
+                    "Payment is not pending",
+                )
+
+            # -------------------------------------------------
+            # Validate uploaded asset
+            # -------------------------------------------------
+
+            # asset = (
+            #     Asset()
+            #     .where(
+            #         {
+            #             "asset_id": asset_id,
+            #         }
+            #     )
+            #     .one_or_none(conn=conn)
+            # )
+
+            # if not asset:
+            #     raise cherrypy.HTTPError(
+            #         404,
+            #         "Receipt asset not found",
+            #     )
+
+            # expected_url = "resources/assets/{}".format(asset.name)
+
+            # if url != expected_url:
+            #     raise cherrypy.HTTPError(
+            #         400,
+            #         "Receipt URL does not match asset",
+            #     )
+
+            # if asset.type not in [
+            #     "application/pdf",
+            #     "image/jpeg",
+            #     "image/png",
+            # ]:
+            #     raise cherrypy.HTTPError(
+            #         400,
+            #         "Invalid receipt file type",
+            #     )
+
+            # if int(asset.size or 0) > 5 * 1024 * 1024:
+            #     raise cherrypy.HTTPError(
+            #         400,
+            #         "Receipt exceeds 5 MB",
+            #     )
+
+            # -------------------------------------------------
+            # Prevent duplicate pending reviews
+            # -------------------------------------------------
+
+            existing_review = (
+                LodgingReservationPaymentReview()
+                .where(
+                    {
+                        "payment_id": payment_id,
+                        "status": "pending",
+                    }
+                )
+                .one_or_none(conn=conn)
+            )
+
+            if existing_review:
+                raise cherrypy.HTTPError(
+                    409,
+                    "Payment already has a pending review",
+                )
+
+            # -------------------------------------------------
+            # Create review
+            # -------------------------------------------------
+
+            now = datetime.utcnow()
+
+            review = LodgingReservationPaymentReview()
+
+            review.review_id = str(uuid.uuid4())
+            review.payment_id = payment_id
+            review.asset_id = asset_id
+            review.url = url
+            review.status = "pending"
+            review.created_at = now
+            review.updated_at = now
+
+            review.insert(conn=conn)
+
+            # -------------------------------------------------
+            # Update payment
+            # -------------------------------------------------
+
+            payment.status = "pending_verification"
+            payment.updated_at = now
+
+            payment.update(conn=conn)
+
+            # -------------------------------------------------
+            # Hold reservation for manager review
+            # -------------------------------------------------
+
+            reservation.expires_at = now + timedelta(hours=24)
+
+            reservation.updated_at = now
+            reservation.update(conn=conn)
+
+            # -------------------------------------------------
+            # Commit
+            # -------------------------------------------------
+
+            conn.commit(conn)
+
+            try:
+
+                reservation_data = self.get_lodging_reservation(reservation_id)
+
+                lodging = reservation_data.pop("lodging", {})
+                reservation_data.pop("charges", None)
+
+                erp_admin_url = ("https://erp.wesmexico.com" "/#/lodging/reservation/payment-review/{}").format(
+                    review.review_id
+                )
+
+                receipt_url = "https://erp.wesmexico.com/" + review.url.lstrip("/")
+
+                Notification().send_lodging_transfer_review_notification(
+                    {
+                        "reservation": reservation_data,
+                        "lodging": lodging,
+                        "payment": payment.as_dict(),
+                        "review": review.as_dict(),
+                        "receipt_url": receipt_url,
+                        "review_url": erp_admin_url,
+                        "to": [
+                            "olafcazarez@gmail.com",
+                            "juancarlos.valenzuela@wesmexico.com",
+                        ],
+                    }
+                )
+
+            except Exception as error:
+                print(error)
+                logging.exception("Lodging transfer review notification failed")
+
+            return {
+                "review": review.as_dict(),
+                "payment": payment.as_dict(),
+                "reservation_id": reservation_id,
+                "message": "Receipt submitted for verification",
+            }
+
+        except cherrypy.HTTPError:
+            conn.rollback(conn)
+            raise
+
+        except pymysql.err.IntegrityError as error:
+            conn.rollback(conn)
+            raise cherrypy.HTTPError(
+                409,
+                str(error),
+            )
+
+        except Exception:
+            conn.rollback(conn)
+            raise
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @tools.secured()
+    def get_lodging_reservation_payment_review(self, review_id, **kwargs):
+
+        conn = LodgingReservationPaymentReview().get_connection()
+
+        review = (
+            LodgingReservationPaymentReview()
+            .where(
+                {
+                    "review_id": review_id,
+                }
+            )
+            .one_or_none(conn=conn)
+        )
+
+        if not review:
+            raise cherrypy.HTTPError(
+                404,
+                "Payment review not found",
+            )
+
+        payment = (
+            LodgingReservationPayment()
+            .where(
+                {
+                    "payment_id": review.payment_id,
+                }
+            )
+            .one_or_none(conn=conn)
+        )
+
+        if not payment:
+            raise cherrypy.HTTPError(
+                404,
+                "Payment not found",
+            )
+
+        reservation = self.get_lodging_reservation(payment.reservation_id)
+
+        return {
+            "review": review.as_dict(),
+            "payment": payment.as_dict(),
+            "reservation": reservation,
+        }
+
+    @tools.cors
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
+    @tools.secured()
+    @tools.validate_body_params(["decision"])
+    def decide_lodging_reservation_payment_review(self, review_id, **kwargs):
+
+        decision = cherrypy.request.json.get("decision")
+
+        if decision not in ["approved", "rejected"]:
+            raise cherrypy.HTTPError(
+                400,
+                "Invalid review decision",
+            )
+
+        conn = LodgingReservationPaymentReview().get_connection()
+
+        send_confirmation = False
+        reservation_id = None
+        payment_data = None
+
+        try:
+
+            # Serialize decisions on this review.
+            # Assumes conn is a transaction-capable DB connection
+            # with the same commit/rollback API used elsewhere.
+            # with conn.get_connection().cursor() as cursor:
+            #     cursor.execute(
+            #         """
+            #         SELECT payment_id
+            #         FROM lodgings_reservations_payments_reviews
+            #         WHERE review_id = %s
+            #         FOR UPDATE
+            #         """,
+            #         (review_id,),
+            #     )
+            #     locked_review = cursor.fetchone()
+
+            # if not locked_review:
+            #     raise cherrypy.HTTPError(
+            #         404,
+            #         "Payment review not found",
+            #     )
+
+            review = LodgingReservationPaymentReview().where({"review_id": review_id}).one_or_none(conn=conn)
+
+            if review.status != "pending":
+                raise cherrypy.HTTPError(
+                    409,
+                    "Review has already been processed",
+                )
+
+            payment = LodgingReservationPayment().where({"payment_id": review.payment_id}).one_or_none(conn=conn)
+
+            if not payment:
+                raise cherrypy.HTTPError(
+                    404,
+                    "Payment not found",
+                )
+
+            reservation_id = payment.reservation_id
+
+            # # Lock reservation before changing its state.
+            # with conn.get_connection().cursor() as cursor:
+            #     cursor.execute(
+            #         """
+            #         SELECT reservation_id
+            #         FROM lodgings_reservations
+            #         WHERE reservation_id = %s
+            #         FOR UPDATE
+            #         """,
+            #         (reservation_id,),
+            #     )
+
+            #     if not cursor.fetchone():
+            #         raise cherrypy.HTTPError(
+            #             404,
+            #             "Reservation not found",
+            #         )
+
+            reservation = LodgingReservation().where({"reservation_id": reservation_id}).one_or_none(conn=conn)
+
+            if payment.provider != "transfer":
+                raise cherrypy.HTTPError(
+                    409,
+                    "Payment is not a bank transfer",
+                )
+
+            if payment.status != "pending_verification":
+                raise cherrypy.HTTPError(
+                    409,
+                    "Payment is not awaiting verification",
+                )
+
+            if reservation.status != "pending_payment":
+                raise cherrypy.HTTPError(
+                    409,
+                    "Reservation is not pending payment",
+                )
+
+            now = datetime.utcnow()
+
+            if reservation.expires_at and reservation.expires_at <= now:
+                raise cherrypy.HTTPError(
+                    409,
+                    "Reservation review period has expired",
+                )
+
+            # Prevent approving another payment on the
+            # same reservation.
+            paid_payment = (
+                LodgingReservationPayment()
+                .where(
+                    {"reservation_id": reservation_id},
+                    {"status": "paid"},
+                )
+                .one_or_none(conn=conn)
+            )
+
+            if paid_payment:
+                raise cherrypy.HTTPError(
+                    409,
+                    "Reservation already has a paid payment",
+                )
+
+            review.status = decision
+            review.reviewed_at = now
+            review.updated_at = now
+
+            # Populate reviewed_by from your authenticated
+            # ERP session's user ID.
+            # review.reviewed_by = current_user_id
+
+            if decision == "approved":
+
+                payment.status = "paid"
+                reservation.status = "confirmed"
+                reservation.expires_at = None
+
+                send_confirmation = True
+
+            else:
+
+                payment.status = "failed"
+                reservation.status = "cancelled"
+
+                # Keep the reservation pending until its
+                # review hold expires, allowing a new
+                # payment attempt if business rules permit.
+
+            payment.updated_at = now
+            reservation.updated_at = now
+
+            review.update(conn=conn)
+            payment.update(conn=conn)
+            reservation.update(conn=conn)
+
+            conn.commit(conn)
+
+            payment_data = payment.as_dict()
+
+        except cherrypy.HTTPError:
+            conn.rollback(conn)
+            raise
+
+        except Exception:
+            conn.rollback(conn)
+            raise
+
+        # -------------------------------------------------
+        # Customer notification (after commit)
+        # -------------------------------------------------
+
+        if send_confirmation:
+
+            try:
+
+                reservation_data = self.get_lodging_reservation(reservation_id)
+
+                charges = reservation_data.pop("charges", [])
+                lodging = reservation_data.pop("lodging", {})
+
+                total = sum(float(charge.get("total", 0) or 0) for charge in charges)
+
+                Notification().send_lodging_reservation_confirmation(
+                    {
+                        "reservation": reservation_data,
+                        "lodging": lodging,
+                        "payment": payment_data,
+                        "charges": charges,
+                        "total": total,
+                    }
+                )
+
+            except Exception:
+                logging.exception("Lodging transfer confirmation email failed")
+
+        return {
+            "review_id": review_id,
+            "decision": decision,
+            "payment": payment_data,
+            "reservation_id": reservation_id,
+            "reservation_status": ("confirmed" if decision == "approved" else "pending_payment"),
+        }

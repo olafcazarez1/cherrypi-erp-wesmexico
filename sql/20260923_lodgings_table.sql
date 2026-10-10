@@ -282,3 +282,50 @@ AFTER reservation_id;
 
 CREATE UNIQUE INDEX uq_lodgings_reservations_reservation_session
 ON lodgings_reservations (reservation_session_id);
+
+
+CREATE TABLE lodgings_reservations_payments_reviews (
+    review_id CHAR(36) NOT NULL,
+    payment_id CHAR(36) NOT NULL,
+    asset_id CHAR(36) NOT NULL,
+    url VARCHAR(1024) NOT NULL,
+
+    status ENUM(
+        'pending',
+        'approved',
+        'rejected'
+    ) NOT NULL DEFAULT 'pending',
+
+    reviewed_by CHAR(36) NULL,
+    reviewed_at DATETIME NULL,
+
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+
+    PRIMARY KEY (review_id),
+
+    INDEX idx_payment_id (payment_id),
+    INDEX idx_asset_id (asset_id),
+
+    CONSTRAINT fk_lodging_payment_review_payment
+        FOREIGN KEY (payment_id)
+        REFERENCES lodgings_reservations_payments(payment_id)
+);
+
+-- Illustrative: verify existing enum values before applying.
+ALTER TABLE lodgings_reservations_payments
+MODIFY COLUMN provider
+    ENUM('paypal', 'mercado_pago', 'transfer', 'courtesy')
+    NOT NULL;
+
+ALTER TABLE lodgings_reservations_payments
+MODIFY COLUMN status
+    ENUM(        
+        'pending',
+        'pending_verification',
+        'paid',
+        'failed',
+        'cancelled',
+        'refunded'
+    )
+    NOT NULL DEFAULT 'pending';

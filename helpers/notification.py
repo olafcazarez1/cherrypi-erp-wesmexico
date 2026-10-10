@@ -1005,3 +1005,53 @@ class Notification(object):
             cc=cc,
             bcc=bcc,
         )
+
+    def send_lodging_transfer_review_notification(self, data):
+
+        file_path = "{base}/notification_templates/{template}".format(
+            base=os.path.dirname(os.path.abspath(__file__)),
+            template="lodging_transfer_review.tpl.html",
+        )
+
+        with open(file_path, "r", encoding="utf-8") as file:
+            content = file.read()
+
+        reservation = data["reservation"]
+        lodging = data["lodging"]
+        payment = data["payment"]
+        review = data["review"]
+
+        guest_name = "{} {}".format(
+            reservation.get("first_name", ""),
+            reservation.get("last_name", ""),
+        ).strip()
+
+        replacements = {
+            "#reservation_code#": reservation.get("code", ""),
+            "#guest_name#": guest_name,
+            "#guest_email#": reservation.get("email", ""),
+            "#guest_phone#": reservation.get("phone", ""),
+            "#lodging_name#": lodging.get("name", ""),
+            "#check_in#": reservation.get("check_in", ""),
+            "#check_out#": reservation.get("check_out", ""),
+            "#amount#": "{:,.2f}".format(float(payment.get("amount") or 0)),
+            "#currency#": str(payment.get("currency", "MXN")).upper(),
+            "#receipt_url#": data["receipt_url"],
+            "#review_url#": data["review_url"],
+        }
+
+        for key, value in replacements.items():
+            content = content.replace(
+                key,
+                html.escape(str(value), quote=True),
+            )
+
+        subject = "Por La Baja - Transferencia por verificar {}".format(reservation.get("code", ""))
+
+        return self._send_html_message(
+            subject=subject,
+            content=content,
+            to=data["to"],
+            cc=data.get("cc", []),
+            bcc=data.get("bcc", []),
+        )

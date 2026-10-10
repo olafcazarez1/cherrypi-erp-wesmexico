@@ -1690,6 +1690,7 @@ CREATE TABLE lodgings_reservations_payments (
 
     status ENUM(
         'pending',
+        'pending_verification',
         'paid',
         'failed',
         'cancelled',
@@ -1727,6 +1728,33 @@ CREATE TABLE lodgings_reservations_payments (
         ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE lodgings_reservations_payments_reviews (
+    review_id CHAR(36) NOT NULL,
+    payment_id CHAR(36) NOT NULL,
+    asset_id CHAR(36) NOT NULL,
+    url VARCHAR(1024) NOT NULL,
+
+    status ENUM(
+        'pending',
+        'approved',
+        'rejected'
+    ) NOT NULL DEFAULT 'pending',
+
+    reviewed_by CHAR(36) NULL,
+    reviewed_at DATETIME NULL,
+
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+
+    PRIMARY KEY (review_id),
+
+    INDEX idx_payment_id (payment_id),
+    INDEX idx_asset_id (asset_id),
+
+    CONSTRAINT fk_lodging_payment_review_payment
+        FOREIGN KEY (payment_id)
+        REFERENCES lodgings_reservations_payments(payment_id)
+);
 
 CREATE TABLE `sales_deliveries_orders` (
     `order_id` CHAR(36) NOT NULL,
