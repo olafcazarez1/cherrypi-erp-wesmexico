@@ -59,7 +59,7 @@ class MapShoppingCart(object):
     ECOMMERCE_PAYMENT_TYPE = "PUE"
     ECOMMERCE_FISCAL_USE = "G03"
 
-    SHIPPING_FREE_MINIMUM = Decimal("2500.00")
+    SHIPPING_FREE_MINIMUM = Decimal("2000.00")
     SHIPPING_PRICE = Decimal("130.00")
 
     # Replace these two values with the service product.
