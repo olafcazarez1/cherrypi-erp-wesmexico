@@ -1088,6 +1088,7 @@ CREATE TABLE `invoiced_documents` (
     `transaction_date` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
     `transaction_status` ENUM('pending', 'paid') DEFAULT 'pending',
     `is_global` tinyint(1) NOT NULL DEFAULT 0,
+    `notes` varchar(512) NOT NULL DEFAULT '',
     `status` ENUM('pending', 'signed', 'cancellation_requested', 'cancelled') NOT NULL DEFAULT 'pending',
     `created_at` TIMESTAMP NOT NULL DEFAULT '2000-01-01 00:00:00',
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP ,
@@ -1603,7 +1604,7 @@ CREATE TABLE `lodgings_reservations` (
         'pending_payment',
         'confirmed',
         'cancelled',
-    'completed'
+        'completed'
     ) NOT NULL DEFAULT 'confirmed',
 
     `expires_at` DATETIME NULL,

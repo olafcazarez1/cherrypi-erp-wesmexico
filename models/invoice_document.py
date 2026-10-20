@@ -685,6 +685,37 @@ class InvoiceDocument(Model):
         self.__is_global = is_global
 
     @property
+    def notes(self):
+        """Getter notes
+
+        Args:
+
+        Returns:
+            string: notes value
+
+        Usage:
+            >>> notes = self.notes
+        """
+        try:
+            return self.__notes
+        except AttributeError:
+            return "active"
+
+    @notes.setter
+    def notes(self, notes):
+        """Setter notes
+
+        Args:
+            notes(string): notes.
+
+        Returns:
+
+        Usage:
+            >>> self.notes = notes
+        """
+        self.__notes = notes
+
+    @property
     def status(self):
         """Getter status
 
