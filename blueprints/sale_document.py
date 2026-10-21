@@ -557,7 +557,7 @@ class MapSaleDocument(object):
 
             product["taxes"] = sorted(product["taxes"], key=lambda i: i["name"])
 
-        document["products"] = sorted(products, key=lambda i: i["name"])
+        document["products"] = sorted(products, key=lambda i: i["position"])
 
         document["payments"] = (
             DocumentPayment()

@@ -426,7 +426,7 @@ class MapInvoiceDocument(object):
 
             product["taxes"] = sorted(product["taxes"], key=lambda i: i["name"])
 
-        document["products"] = sorted(products, key=lambda i: i["name"])
+        document["products"] = sorted(products, key=lambda i: i["position"])
 
         items = (
             DocumentInvoice()

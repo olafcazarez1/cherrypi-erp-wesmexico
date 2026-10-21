@@ -151,6 +151,37 @@ class SaleDocumentProduct(Model):
         self.__measure_id = measure_id
 
     @property
+    def position(self):
+        """Getter position
+
+        Args:
+
+        Returns:
+            int: position value
+
+        Usage:
+            >>> position = self.position
+        """
+        try:
+            return self.__position
+        except AttributeError:
+            return None
+
+    @position.setter
+    def position(self, position):
+        """Setter position
+
+        Args:
+            position(int): position.
+
+        Returns:
+
+        Usage:
+            >>> self.position = position
+        """
+        self.__position = position
+
+    @property
     def currency(self):
         """Getter currency
 
