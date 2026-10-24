@@ -1897,7 +1897,8 @@ class MapLodgings(object):
                     "expires_at": None,
                     "created_at": datetime.utcnow(),
                     "updated_at": datetime.utcnow(),
-                }
+                },
+                ignore_restricted=True,
             )
 
             reservation.insert(
@@ -1932,7 +1933,8 @@ class MapLodgings(object):
                     "total": subtotal,
                     "currency": lodging.currency,
                     "status": "active",
-                }
+                },
+                ignore_restricted=True,
             )
 
             charge.insert(
@@ -1955,7 +1957,8 @@ class MapLodgings(object):
                     "amount": subtotal,
                     "currency": lodging.currency,
                     "status": "paid",
-                }
+                },
+                ignore_restricted=True,
             )
 
             payment.insert(
