@@ -58,6 +58,8 @@ class Lodging(Model):
 
     zip = Model.field("zip", "")
 
+    google_maps_url = Model.field("google_maps_url", "")
+
     observations = Model.field("observations", "")
 
     status = Model.field("status", "active")

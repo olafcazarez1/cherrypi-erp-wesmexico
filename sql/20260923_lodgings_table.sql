@@ -35,6 +35,7 @@ CREATE TABLE `lodgings` (
     `locality_id` CHAR(4) NOT NULL DEFAULT '',
 
     `zip` CHAR(5) NOT NULL DEFAULT '',
+    `google_maps_url` TEXT NOT NULL DEFAULT ('')
 
     `observations` TEXT NULL,
 
