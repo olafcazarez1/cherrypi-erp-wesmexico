@@ -135,7 +135,7 @@ class Notification(object):
 
         document = data["document"]
 
-        to = data.get("to", [document["client"]["email"]])
+        # to = data.get("to", [document["client"]["email"]])
         cc = []
         to = [
             "olaf.cazarez@wesmexico.com",
@@ -157,6 +157,51 @@ class Notification(object):
         content = content.replace("#client_name#", document["client"]["legal_name"])
 
         content = content.replace("#total#", "{:.2f}".format(document["total"]))
+
+        taxpayer_id = (document["company"].get("taxpayer_id") or "").strip().upper()
+
+        bank_information = ""
+
+        if taxpayer_id == "GJM0804022S3":
+            bank_information = """
+            <div style="margin-top: 20px;">
+                <h3>Datos bancarios para transferencia</h3>
+
+                <p>
+                    <strong>Banco:</strong> BBVA<br>
+                    <strong>Beneficiario:</strong> Grupo JUCAVZA de México<br>
+                    <strong>Número de cuenta:</strong> 0161201921<br>
+                    <strong>CLABE interbancaria:</strong> 012730001612019212<br>
+                    <strong>RFC:</strong> GJM0804022S3
+                </p>
+
+                <p>
+                    Favor de incluir el número de factura
+                    como referencia al realizar la transferencia.
+                </p>
+            </div>
+            """
+        elif taxpayer_id == "VAAJ780903F8A":
+            bank_information = """
+            <div style="margin-top: 20px;">
+                <h3>Datos bancarios para transferencia</h3>
+
+                <p>
+                    <strong>Banco:</strong> Azteca<br>
+                    <strong>Beneficiario:</strong> Juan Carlos Valenzuela Angulo<br>
+                    <strong>Número de cuenta:</strong> 2098 1377 8837 42<br>
+                    <strong>CLABE interbancaria:</strong> 1277 3001 3778 8374 28<br>
+                    <strong>RFC:</strong> VAAJ780903F8A
+                </p>
+
+                <p>
+                    Favor de incluir el número de factura
+                    como referencia al realizar la transferencia.
+                </p>
+            </div>
+            """
+
+        content = content.replace("#bank_information#", bank_information)
 
         """ Create a text/plain message """
         subject = "WesMexico - Factura {} ".format(document["code"])
