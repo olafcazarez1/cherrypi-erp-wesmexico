@@ -158,7 +158,7 @@ class Notification(object):
         content = content.replace("#client_name#", document["client"]["legal_name"])
 
         content = content.replace("#total#", "{:.2f}".format(document["total"]))
-        content = content.replace("#invoice_code#", "{:.2f}".format(document["code"]))
+        content = content.replace("#invoice_code#", document["code"])
 
         taxpayer_id = (document["company"].get("taxpayer_id") or "").strip().upper()
 
