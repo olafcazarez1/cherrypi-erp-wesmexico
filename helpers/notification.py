@@ -135,13 +135,9 @@ class Notification(object):
 
         document = data["document"]
 
-        to = data.get("to", [document["client"]["email"]])
+        to = data.get("to")
         cc = []
-        bcc = [
-            "olaf.cazarez@wesmexico.com",
-            "juancarlos.valenzuela@wesmexico.com",
-            # document["client"]["email"]
-        ]
+        bcc = []
 
         if "cc" in data:
             cc = data["cc"]
