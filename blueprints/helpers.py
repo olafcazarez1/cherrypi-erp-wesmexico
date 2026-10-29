@@ -89,6 +89,9 @@ class MapHelpers(object):
             raise cherrypy.HTTPError(404, "Not found")
 
         document = document.as_dict()
+
+        document["company"] = Company().where({"company_id": document["company_id"]}).one_or_none(conn=conn).as_dict()
+
         document["branch"] = (
             BranchOffice().where({"branch_id": document["branch_id"]}).one_or_none(conn=conn).as_dict()
         )
