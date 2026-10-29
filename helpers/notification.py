@@ -135,13 +135,15 @@ class Notification(object):
 
         document = data["document"]
 
-        to = data.get("to", [document["client"]["email"]])
+        # to = data.get("to", [document["client"]["email"]])
         cc = []
-        bcc = [
+        to = [
             "olaf.cazarez@wesmexico.com",
             "juancarlos.valenzuela@wesmexico.com",
             # document["client"]["email"]
         ]
+        cc = []
+        bcc = []
 
         if "cc" in data:
             cc = data["cc"]
@@ -152,52 +154,124 @@ class Notification(object):
         f = open(file_path, "r")
         content = f.read()
 
+        content = content.replace("#company_name#", document["company"]["legal_name"])
         content = content.replace("#client_name#", document["client"]["legal_name"])
 
         content = content.replace("#total#", "{:.2f}".format(document["total"]))
+        content = content.replace("#invoice_code#", "{:.2f}".format(document["code"]))
 
         taxpayer_id = (document["company"].get("taxpayer_id") or "").strip().upper()
 
+        taxpayer_id = (document.get("company", {}).get("taxpayer_id") or "").strip().upper()
+
+        bank_accounts = {
+            "GJM0804022S3": {
+                "bank": "BBVA",
+                "beneficiary": "Grupo JUCAVZA de México",
+                "account": "0161201921",
+                "clabe": "012730001612019212",
+                "rfc": "GJM0804022S3",
+            },
+            "VAAJ780903F8A": {
+                "bank": "Azteca",
+                "beneficiary": "Juan Carlos Valenzuela Angulo",
+                "account": "2098 1377 8837 42",
+                "clabe": "1277 3001 3778 8374 28",
+                "rfc": "VAAJ780903F8A",
+            },
+        }
+
         bank_information = ""
+        bank = bank_accounts.get(taxpayer_id)
 
-        if taxpayer_id == "GJM0804022S3":
+        if bank:
             bank_information = """
-            <div style="margin-top: 20px;">
-                <h3>Datos bancarios para transferencia</h3>
+            <table role="presentation" width="100%" cellpadding="0"
+                cellspacing="0" border="0"
+                style="margin-top:26px; border:1px solid #e5e9ef;
+                        border-collapse:collapse;">
 
-                <p>
-                    <strong>Banco:</strong> BBVA<br>
-                    <strong>Beneficiario:</strong> Grupo JUCAVZA de México<br>
-                    <strong>Número de cuenta:</strong> 0161201921<br>
-                    <strong>CLABE interbancaria:</strong> 012730001612019212<br>
-                    <strong>RFC:</strong> GJM0804022S3
-                </p>
+                <tr>
+                    <td colspan="2"
+                        style="padding:16px 20px; background-color:#f5f8fc;
+                            font-size:15px; font-weight:bold; color:#173b63;">
+                        Datos bancarios para transferencia
+                    </td>
+                </tr>
 
-                <p>
-                    Favor de incluir el número de factura
-                    como referencia al realizar la transferencia.
-                </p>
-            </div>
-            """
-        elif taxpayer_id == "VAAJ780903F8A":
-            bank_information = """
-            <div style="margin-top: 20px;">
-                <h3>Datos bancarios para transferencia</h3>
+                <tr>
+                    <td style="padding:16px 20px 6px; font-size:12px;
+                            color:#65758a;">
+                        BANCO
+                    </td>
+                    <td style="padding:16px 20px 6px; font-size:12px;
+                            color:#65758a;">
+                        BENEFICIARIO
+                    </td>
+                </tr>
 
-                <p>
-                    <strong>Banco:</strong> Azteca<br>
-                    <strong>Beneficiario:</strong> Juan Carlos Valenzuela Angulo<br>
-                    <strong>Número de cuenta:</strong> 2098 1377 8837 42<br>
-                    <strong>CLABE interbancaria:</strong> 1277 3001 3778 8374 28<br>
-                    <strong>RFC:</strong> VAAJ780903F8A
-                </p>
+                <tr>
+                    <td style="padding:0 20px 16px; font-size:15px;
+                            font-weight:bold; color:#273244;">
+                        {bank}
+                    </td>
+                    <td style="padding:0 20px 16px; font-size:14px;
+                            font-weight:bold; color:#273244;">
+                        {beneficiary}
+                    </td>
+                </tr>
 
-                <p>
-                    Favor de incluir el número de factura
-                    como referencia al realizar la transferencia.
-                </p>
-            </div>
-            """
+                <tr>
+                    <td colspan="2"
+                        style="padding:14px 20px; border-top:1px solid #e9edf2;">
+                        <div style="font-size:12px; color:#65758a;">
+                            NÚMERO DE CUENTA
+                        </div>
+                        <div style="font-size:16px; font-weight:bold;
+                                    color:#273244; margin-top:5px;">
+                            {account}
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="2"
+                        style="padding:14px 20px; border-top:1px solid #e9edf2;">
+                        <div style="font-size:12px; color:#65758a;">
+                            CLABE INTERBANCARIA
+                        </div>
+                        <div style="font-size:16px; font-weight:bold;
+                                    color:#173b63; margin-top:5px;">
+                            {clabe}
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="2"
+                        style="padding:14px 20px; border-top:1px solid #e9edf2;">
+                        <div style="font-size:12px; color:#65758a;">
+                            RFC
+                        </div>
+                        <div style="font-size:14px; font-weight:bold;
+                                    color:#273244; margin-top:5px;">
+                            {rfc}
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="2"
+                        style="padding:14px 20px; background-color:#fafbfd;
+                            border-top:1px solid #e9edf2;
+                            font-size:12px; line-height:1.7; color:#65758a;">
+                        Favor de indicar el número de factura como referencia
+                        al realizar la transferencia.
+                    </td>
+                </tr>
+
+            </table>
+            """.format(**bank)
 
         content = content.replace("#bank_information#", bank_information)
 
