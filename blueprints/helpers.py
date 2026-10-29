@@ -97,7 +97,11 @@ class MapHelpers(object):
         )
 
         document["client"] = Client().where({"client_id": document["client_id"]}).one_or_none(conn=conn).as_dict()
-        bcc_emails = []
+        bcc_emails = [
+            "olaf.cazarez@wesmexico.com",
+            "juancarlos.valenzuela@wesmexico.com",
+            # document["client"]["email"]
+        ]
 
         meta = MetaConfig.instance()
         settings = meta.get_config("settings")
@@ -147,7 +151,7 @@ class MapHelpers(object):
                 "report": report,
                 "report_name": response["report_name"],
                 "document": document,
-                "to": [to],
+                "to": [to] if to else [document["client"]["email"]],
                 "bcc": [entry["email"] for entry in bcc_emails],
             }
         )
