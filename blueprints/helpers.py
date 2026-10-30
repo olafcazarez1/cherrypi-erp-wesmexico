@@ -152,7 +152,7 @@ class MapHelpers(object):
                 "report_name": response["report_name"],
                 "document": document,
                 "to": [to] if to else [document["client"]["email"]],
-                "bcc": [entry["email"] for entry in bcc_emails],
+                "bcc": bcc_emails,
             }
         )
 
