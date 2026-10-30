@@ -480,7 +480,12 @@ class MapSaleDocument(object):
         #     document["delivery_to"]["municipality"] = document["branch"]["municipality"]
         #     document["delivery_to"]["locality"] = document["branch"]["locality"]
 
-        items = SaleDocumentProduct().where({"document_id": document["document_id"]}).all(conn=conn, collection=False)
+        items = (
+            SaleDocumentProduct()
+            .where({"document_id": document["document_id"]})
+            .order_by(["position"])
+            .all(conn=conn, collection=False)
+        )
 
         # prepare products
         products = {}
@@ -557,7 +562,8 @@ class MapSaleDocument(object):
 
             product["taxes"] = sorted(product["taxes"], key=lambda i: i["name"])
 
-        document["products"] = sorted(products, key=lambda i: i["position"])
+        document["products"] = products
+        # document["products"] = sorted(products, key=lambda i: i["position"])
 
         document["payments"] = (
             DocumentPayment()
@@ -984,7 +990,7 @@ class MapSaleDocument(object):
             conn.rollback(conn)
             raise cherrypy.HTTPError(500, "Problem saving data: {}".format(str(e)))
 
-        return {}
+        return payment.as_dict()
 
     @tools.cors
     @cherrypy.tools.json_out()
@@ -1013,7 +1019,7 @@ class MapSaleDocument(object):
             conn.rollback(conn)
             raise cherrypy.HTTPError(500, "Problem saving data: {}".format(str(e)))
 
-        return {}
+        return document.as_dict()
 
     @tools.cors
     @cherrypy.tools.json_out()
